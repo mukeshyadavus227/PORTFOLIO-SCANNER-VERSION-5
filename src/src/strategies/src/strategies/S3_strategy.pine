@@ -1,0 +1,45 @@
+// ============================================================================
+// SUB-STRATEGY S3
+// ============================================================================
+// Description : Sub-Strategy 3 — [Define your strategy name and approach]
+// Logic       : [Describe the trading logic]
+// Signals     : Generates long/short/flat signals with confidence scores
+// Target      : [Target regime]
+// Timeframe   : [Recommended timeframe]
+// ============================================================================
+
+//@version=5
+
+// ============================================================================
+// S3 INPUT PARAMETERS
+// ============================================================================
+// TODO: Define S3-specific input parameters
+
+
+// ============================================================================
+// S3 CORE LOGIC
+// ============================================================================
+// TODO: Implement S3 trading logic
+// Follow the same interface as S1:
+// 1. Accept market data (OHLCV) and regime context
+// 2. Apply S3-specific indicators and conditions
+// 3. Return signal (+1, -1, 0) and confidence (0.0–1.0)
+
+
+// ============================================================================
+// S3 ENTRY CONDITIONS
+// ============================================================================
+// TODO: Define specific entry conditions for S3
+
+
+// ============================================================================
+// S3 EXIT CONDITIONS
+// ============================================================================
+// TODO: Define specific exit conditions for S3
+
+
+// ============================================================================
+// S3 SIGNAL OUTPUT
+// ============================================================================
+// s3_signal     = 0
+// s3_confidence = 0.0

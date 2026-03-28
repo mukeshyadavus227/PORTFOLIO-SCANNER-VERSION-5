@@ -1,0 +1,119 @@
+ Main Entry Point
+ // ============================================================================
+ // Description : Master strategy script that orchestrates all sub-strategies,
+ //               regime detection, scoring, winner selection, and composite
+ //               fire conditions.
+ //
+ // Components  : S1–S4 Sub-Strategies, Regime Detector, Scoring Engine,
+ //               Winner Selector, Composite Fire Conditions
+ //
+ // Pine Script : v5+
+ // Author      : mukeshyadavus227
+ // Repository  : PORTFOLIO-SCANNER-VERSION-5
+ // ============================================================================
+
+ //@version=5
+ strategy("Portfolio Scanner V5", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+ // ============================================================================
+ // SECTION 1: INPUT PARAMETERS
+ // ============================================================================
+
+ // --- General Settings ---
+ group_general = "General Settings"
+ i_startDate   = input.time(timestamp("2020-01-01"), title="Backtest Start Date", group=group_general)
+ i_endDate     = input.time(timestamp("2030-12-31"), title="Backtest End Date",   group=group_general)
+
+ // --- Regime Detection Inputs ---
+ group_regime = "Regime Detection"
+ // TODO: Add regime detection parameters here
+
+ // --- Sub-Strategy Selection ---
+ group_strategy = "Strategy Selection"
+ i_enableS1 = input.bool(true,  title="Enable S1", group=group_strategy)
+ i_enableS2 = input.bool(true,  title="Enable S2", group=group_strategy)
+ i_enableS3 = input.bool(true,  title="Enable S3", group=group_strategy)
+ i_enableS4 = input.bool(true,  title="Enable S4", group=group_strategy)
+
+ // --- Scoring Settings ---
+ group_scoring = "Scoring Engine"
+ // TODO: Add scoring parameters here
+
+ // --- Composite Fire Settings ---
+ group_fire = "Composite Fire Conditions"
+ // TODO: Add fire condition parameters here
+
+
+ // ============================================================================
+ // SECTION 2: REGIME DETECTION
+ // ============================================================================
+ // TODO: Import/include regime detection logic from modules/regime_detection.pine
+ // currentRegime = detectRegime(...)
+
+
+ // ============================================================================
+ // SECTION 3: SUB-STRATEGY SIGNALS
+ // ============================================================================
+
+ // --- S1: Sub-Strategy 1 ---
+ // TODO: Import/include S1 logic from strategies/S1_strategy.pine
+ // s1_signal = 0
+
+ // --- S2: Sub-Strategy 2 ---
+ // TODO: Import/include S2 logic from strategies/S2_strategy.pine
+ // s2_signal = 0
+
+ // --- S3: Sub-Strategy 3 ---
+ // TODO: Import/include S3 logic from strategies/S3_strategy.pine
+ // s3_signal = 0
+
+ // --- S4: Sub-Strategy 4 ---
+ // TODO: Import/include S4 logic from strategies/S4_strategy.pine
+ // s4_signal = 0
+
+
+ // ============================================================================
+ // SECTION 4: SCORING ENGINE
+ // ============================================================================
+ // TODO: Import/include scoring logic from modules/scoring_engine.pine
+ // scores = scoreStrategies(s1_signal, s2_signal, s3_signal, s4_signal, currentRegime)
+
+
+ // ============================================================================
+ // SECTION 5: WINNER SELECTION
+ // ============================================================================
+ // TODO: Import/include winner selection from modules/winner_selection.pine
+ // winner = selectWinner(scores)
+
+
+ // ============================================================================
+ // SECTION 6: COMPOSITE FIRE CONDITIONS
+ // ============================================================================
+ // TODO: Import/include composite fire logic from modules/composite_fire.pine
+ // fireConditionMet = checkFireConditions(winner, currentRegime)
+
+
+ // ============================================================================
+ // SECTION 7: TRADE EXECUTION
+ // ============================================================================
+
+ // Placeholder: Replace with actual signal logic
+ inDateRange = time >= i_startDate and time <= i_endDate
+
+ // if inDateRange and fireConditionMet
+ //     if winner.direction == 1
+ //         strategy.entry("Long", strategy.long)
+ //     if winner.direction == -1
+ //         strategy.entry("Short", strategy.short)
+
+
+ // ============================================================================
+ // SECTION 8: VISUALIZATION
+ // ============================================================================
+ // TODO: Add plot overlays, background colors for regime, signal markers, etc.
+
+
+ // ============================================================================
+ // SECTION 9: ALERTS
+ // ============================================================================
+ // TODO: Configure alert conditions for signal generation

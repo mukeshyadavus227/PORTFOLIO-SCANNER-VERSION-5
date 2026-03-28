@@ -1,0 +1,62 @@
+// ============================================================================
+// UTILITIES: HELPER FUNCTIONS
+// ============================================================================
+// Description : Common utility functions used across the Portfolio Scanner V5
+//               strategy. Includes math helpers, formatting, and alert builders.
+// ============================================================================
+
+//@version=5
+
+// ============================================================================
+// MATH HELPERS
+// ============================================================================
+
+// Normalize a value to 0.0–1.0 range
+// normalize(value, minVal, maxVal) =>
+//     math.min(math.max((value - minVal) / (maxVal - minVal), 0.0), 1.0)
+
+// Clamp a value between min and max
+// clamp(value, minVal, maxVal) =>
+//     math.min(math.max(value, minVal), maxVal)
+
+// Calculate percentage change
+// pctChange(current, previous) =>
+//     previous != 0 ? (current - previous) / previous * 100 : 0.0
+
+
+// ============================================================================
+// SIGNAL HELPERS
+// ============================================================================
+
+// Convert signal to readable string
+// signalToString(signal) =>
+//     signal == 1 ? "LONG" : signal == -1 ? "SHORT" : "FLAT"
+
+// Check if a new signal differs from previous
+// isNewSignal(currentSignal, previousSignal) =>
+//     currentSignal != previousSignal and currentSignal != 0
+
+
+// ============================================================================
+// ALERT MESSAGE BUILDERS
+// ============================================================================
+
+// Build alert message for trade entry
+// buildEntryAlert(strategyName, direction, confidence, regime) =>
+//     str.format("PSV5 | {0} | {1} | Conf: {2} | Regime: {3}",
+//                strategyName, signalToString(direction),
+//                str.tostring(confidence, "#.##"), str.tostring(regime))
+
+
+// ============================================================================
+// PLOTTING HELPERS
+// ============================================================================
+
+// Get color based on signal direction
+// signalColor(signal) =>
+//     signal == 1 ? color.green : signal == -1 ? color.red : color.gray
+
+// Get regime background color
+// regimeColor(regime) =>
+//     // TODO: Map each regime to a color
+//     color.new(color.gray, 90))

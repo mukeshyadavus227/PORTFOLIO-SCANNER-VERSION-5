@@ -1,0 +1,42 @@
+ [Define your strategy name and approach]
+ // Logic       : [Describe the trading logic]
+ // Signals     : Generates long/short/flat signals with confidence scores
+ // Target      : [Target regime]
+ // Timeframe   : [Recommended timeframe]
+ // ============================================================================
+
+ //@version=5
+
+ // ============================================================================
+ // S4 INPUT PARAMETERS
+ // ============================================================================
+ // TODO: Define S4-specific input parameters
+
+
+ // ============================================================================
+ // S4 CORE LOGIC
+ // ============================================================================
+ // TODO: Implement S4 trading logic
+ // Follow the same interface as S1:
+ // 1. Accept market data (OHLCV) and regime context
+ // 2. Apply S4-specific indicators and conditions
+ // 3. Return signal (+1, -1, 0) and confidence (0.0–1.0)
+
+
+ // ============================================================================
+ // S4 ENTRY CONDITIONS
+ // ============================================================================
+ // TODO: Define specific entry conditions for S4
+
+
+ // ============================================================================
+ // S4 EXIT CONDITIONS
+ // ============================================================================
+ // TODO: Define specific exit conditions for S4
+
+
+ // ============================================================================
+ // S4 SIGNAL OUTPUT
+ // ============================================================================
+ // s4_signal     = 0
+ // s4_confidence = 0.0

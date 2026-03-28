@@ -1,0 +1,104 @@
+// ============// ============================================================================
+// SUB-STRATEGY S2
+// ============================================================================
+// Description : Sub-Strategy 2 — [Define your strategy name and approach]
+// Logic       : [Describe the trading logic]
+// Signals     : Generates long/short/flat signals with confidence scores
+// Target      : [Target regime]
+// Timeframe   : [Recommended timeframe]
+// ============================================================================
+
+//@version=5
+
+// ============================================================================
+// S2 INPUT PARAMETERS
+// ============================================================================
+// TODO: Define S2-specific input parameters
+
+
+// ============================================================================
+// S2 CORE LOGIC
+// ============================================================================
+// TODO: Implement S2 trading logic
+// Follow the same interface as S1:
+// 1. Accept market data (OHLCV) and regime context
+// 2. Apply S2-specific indicators and conditions
+// 3. Return signal (+1, -1, 0) and confidence (0.0–1.0)
+
+
+// ============================================================================
+// S2 ENTRY CONDITIONS
+// ============================================================================
+// TODO: Define specific entry conditions for S2
+
+
+// ============================================================================
+// S2 EXIT CONDITIONS
+// ============================================================================
+// TODO: Define specific exit conditions for S2
+
+
+// ============================================================================
+// S2 SIGNAL OUTPUT
+// ============================================================================
+// s2_signal     = 0
+// s2_confidence = 0.0================================================================
+// SUB-STRATEGY S1
+// ============================================================================
+// Description : Sub-Strategy 1 — [Define your strategy name and approach]
+// Logic       : [Describe the trading logic — e.g., trend-following, mean-reversion]
+// Signals     : Generates long/short/flat signals with confidence scores
+// Target      : [Target regime — e.g., trending markets]
+// Timeframe   : [Recommended timeframe]
+// ============================================================================
+
+//@version=5
+
+// ============================================================================
+// S1 INPUT PARAMETERS
+// ============================================================================
+// TODO: Define S1-specific input parameters
+// s1_lookback = input.int(20, title="S1 Lookback Period", group="S1 Settings")
+
+
+// ============================================================================
+// S1 CORE LOGIC
+// ============================================================================
+// TODO: Implement S1 trading logic
+//
+// This function should:
+// 1. Accept market data (OHLCV) and regime context
+// 2. Apply S1-specific indicators and conditions
+// 3. Return a signal: +1 (long), -1 (short), 0 (flat)
+// 4. Return a confidence score (0.0 to 1.0)
+//
+// Example structure:
+// s1_calculateSignal() =>
+//     signal = 0
+//     confidence = 0.0
+//     // ... your logic here ...
+//     [signal, confidence]
+
+
+// ============================================================================
+// S1 ENTRY CONDITIONS
+// ============================================================================
+// TODO: Define specific entry conditions for S1
+// s1_longCondition  = false
+// s1_shortCondition = false
+
+
+// ============================================================================
+// S1 EXIT CONDITIONS
+// ============================================================================
+// TODO: Define specific exit conditions for S1
+// s1_exitLong  = false
+// s1_exitShort = false
+
+
+// ============================================================================
+// S1 SIGNAL OUTPUT
+// ============================================================================
+// Final signal output to be consumed by the scoring engine
+// s1_signal     = 0      // +1 = long, -1 = short, 0 = flat
+// s1_confidence = 0.0    // 0.0 to 1.0
