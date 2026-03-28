@@ -135,6 +135,8 @@ class TradeSimulator:
         reward_ratio: float = 2.0,
         atr_stop_mult: float = 2.0,
         hard_dollar_stop: float = 100.0,
+        # Position sizing
+        target_risk_per_trade: float = 100.0,
     ):
         self.initial_capital = initial_capital
         self.point_value = point_value
@@ -150,6 +152,7 @@ class TradeSimulator:
         self.reward_ratio = reward_ratio
         self.atr_stop_mult = atr_stop_mult
         self.hard_dollar_stop = hard_dollar_stop
+        self.target_risk_per_trade = target_risk_per_trade
 
     @classmethod
     def from_preset(cls, ticker: str, **overrides) -> "TradeSimulator":
@@ -243,8 +246,9 @@ class TradeSimulator:
                     if risk_per_contract > self.max_risk_per_trade:
                         pass
                     else:
-                        # Position sizing: 1 contract (fixed for simplicity)
-                        contracts = 1
+                        # Position sizing: target_risk / risk_per_contract
+                        contracts = max(1, int(self.target_risk_per_trade
+                                               / risk_per_contract))
                         trade_risk_amount = risk_per_contract * contracts
 
                         # Set stop and target
