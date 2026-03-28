@@ -1,0 +1,621 @@
+// ════════════════════════════════════════════════════════════════════════
+// Portfolio Scanner V6 — Long-Only Options Signal Generator
+// ════════════════════════════════════════════════════════════════════════
+// Data-driven rewrite of V5. Key changes from backtesting 1,280 trades:
+//   - LONG ONLY (shorts had 23% WR across every filter tested)
+//   - trending_up is the only profitable regime (+$6,181 net)
+//   - RSI 60-70 sweet spot, enter near highs, EMA9>EMA21 is #1 predictor
+//   - WAE, Choppiness, VWAP, Range Filter excluded (zero predictive value)
+//   - Three modes: Trend Continuation, Breakout, Iron Condor (neutral)
+// ════════════════════════════════════════════════════════════════════════
+
+//@version=6
+strategy("Portfolio Scanner V6 — Options Signal Generator", overlay=true,
+     initial_capital=50000, default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10, commission_type=strategy.commission.cash_per_contract,
+     commission_value=1.50, slippage=1, process_orders_on_close=true,
+     calc_on_every_tick=false)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 1 — INPUT PARAMETERS
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Master Controls ──
+minScoreA     = input.int(70, "Mode A Min Score", minval=40, maxval=95, step=5,
+     group="Master Controls",
+     tooltip="Minimum composite score to fire a Trend Continuation signal")
+minScoreB     = input.int(65, "Mode B Min Score", minval=40, maxval=95, step=5,
+     group="Master Controls",
+     tooltip="Minimum composite score to fire a Breakout signal")
+minScoreC     = input.int(50, "Mode C Min Score", minval=30, maxval=80, step=5,
+     group="Master Controls",
+     tooltip="Minimum composite score to fire an Iron Condor alert")
+cooldownBars  = input.int(5, "Cooldown (bars)", minval=1, maxval=30,
+     group="Master Controls",
+     tooltip="Minimum bars between signals (5 = ~1 trading week)")
+webhookToken  = input.string("mukesh-tv-2026", "Webhook Token",
+     group="Master Controls")
+showDashboard = input.bool(true, "Show Dashboard",
+     group="Master Controls")
+showLabels    = input.bool(true, "Show Signal Labels",
+     group="Master Controls")
+showRegimeBG  = input.bool(true, "Show Regime Background",
+     group="Master Controls")
+
+// ── Regime Detection ──
+adxLen        = input.int(14, "ADX Length", minval=7, maxval=30,
+     group="Regime Detection")
+adxTrendThr   = input.int(25, "ADX Trend Threshold", minval=15, maxval=40,
+     group="Regime Detection",
+     tooltip="ADX above this = trending")
+adxRangeThr   = input.int(20, "ADX Range Threshold", minval=10, maxval=25,
+     group="Regime Detection",
+     tooltip="ADX below this = ranging")
+adxQuietBars  = input.int(5, "ADX Quiet Bars (Mode C)", minval=3, maxval=15,
+     group="Regime Detection",
+     tooltip="Consecutive bars ADX < range threshold to trigger Mode C")
+
+// ── Mode A: Trend Continuation ──
+rsiLen        = input.int(14, "RSI Length", minval=7, maxval=21,
+     group="Mode A: Trend Continuation")
+rsiLoEntry    = input.int(55, "RSI Entry Low", minval=40, maxval=65,
+     group="Mode A: Trend Continuation",
+     tooltip="RSI must be above this to enter (sweet spot starts at 55)")
+rsiHiEntry    = input.int(75, "RSI Entry High", minval=65, maxval=85,
+     group="Mode A: Trend Continuation",
+     tooltip="RSI must be below this to enter (avoid overbought)")
+pullbackPct   = input.float(2.0, "Max % From 20-Bar High", minval=0.5, maxval=10.0, step=0.5,
+     group="Mode A: Trend Continuation",
+     tooltip="Close must be within this % of the 20-bar high (data: 0-1% = 51% WR)")
+emaFast       = input.int(9, "Fast EMA", minval=3, maxval=20,
+     group="Mode A: Trend Continuation")
+emaSlow       = input.int(21, "Slow EMA", minval=10, maxval=50,
+     group="Mode A: Trend Continuation")
+emaTrend      = input.int(200, "Trend EMA", minval=100, maxval=300,
+     group="Mode A: Trend Continuation")
+
+// ── Mode B: Breakout ──
+donchianLen   = input.int(20, "Donchian Length", minval=10, maxval=40,
+     group="Mode B: Breakout")
+brkVolMult    = input.float(1.5, "Volume Spike Multiplier", minval=1.0, maxval=3.0, step=0.1,
+     group="Mode B: Breakout",
+     tooltip="Volume must exceed SMA(20) * this for breakout confirmation")
+
+// ── Risk / ATR Filters ──
+atrLen        = input.int(14, "ATR Length", minval=5, maxval=30,
+     group="Risk Filters")
+atrMinPct     = input.float(0.8, "Min ATR % of Price", minval=0.1, maxval=3.0, step=0.1,
+     group="Risk Filters",
+     tooltip="Skip signals when ATR < this % (too quiet for options)")
+atrMaxPct     = input.float(6.0, "Max ATR % of Price", minval=2.0, maxval=15.0, step=0.5,
+     group="Risk Filters",
+     tooltip="Skip signals when ATR > this % (options too expensive)")
+
+// ── Exit Parameters ──
+rsiExitHi     = input.int(80, "RSI Take Profit Level", minval=70, maxval=90,
+     group="Exit Rules")
+maxHoldBars   = input.int(20, "Max Hold Bars (Time Stop)", minval=5, maxval=60,
+     group="Exit Rules",
+     tooltip="Auto-exit after this many bars (theta decay consideration)")
+emaExitBars   = input.int(2, "EMA Stop Consecutive Bars", minval=1, maxval=5,
+     group="Exit Rules",
+     tooltip="Close below EMA(21) for this many bars triggers stop")
+
+// ── Ticker Cluster ──
+tickerCluster = input.string("Auto-detect", "Ticker Cluster",
+     options=["Trend", "Momentum", "Auto-detect"],
+     group="Ticker Cluster",
+     tooltip="Trend: Mode A primary. Momentum: Mode A + B. Auto: detects from ADX behavior.")
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 2 — CORE INDICATOR CALCULATIONS
+// ════════════════════════════════════════════════════════════════════════
+
+// ── EMAs ──
+ema9          = ta.ema(close, emaFast)
+ema21         = ta.ema(close, emaSlow)
+ema200        = ta.ema(close, emaTrend)
+
+// ── RSI ──
+rsi           = ta.rsi(close, rsiLen)
+
+// ── ADX / DI ──
+[diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
+
+// ── ATR ──
+atr           = ta.atr(atrLen)
+atrPct        = close > 0 ? atr / close * 100.0 : 0.0
+
+// ── MACD ──
+[macdLine, signalLine, macdHist] = ta.macd(close, 12, 26, 9)
+
+// ── Volume ──
+volSMA20      = ta.sma(volume, 20)
+volAboveAvg   = volume > volSMA20 * 0.8
+volSpike      = volume > volSMA20 * brkVolMult
+
+// ── Donchian Channel ──
+donchianHi    = ta.highest(high, donchianLen)
+donchianLo    = ta.lowest(low, donchianLen)
+
+// ── Pullback from 20-bar high ──
+high20        = ta.highest(high, 20)
+pctFromHigh   = high20 > 0 ? (high20 - close) / high20 * 100.0 : 0.0
+
+// ── Bollinger Bands (Mode C support/resistance) ──
+bbLen         = 20
+bbMult        = 2.0
+[bbMid, bbUp, bbLo] = ta.bb(close, bbLen, bbMult)
+bbWidth       = bbMid > 0 ? (bbUp - bbLo) / bbMid * 100.0 : 0.0
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 3 — WEEKLY MULTI-TIMEFRAME CONFIRMATION
+// ════════════════════════════════════════════════════════════════════════
+
+// Helper: extract ADX from DMI tuple for use in request.security
+f_adx(int len) =>
+    [_p, _m, a] = ta.dmi(len, len)
+    a
+
+wkEma9        = request.security(syminfo.tickerid, "W", ta.ema(close, 9),
+     barmerge.gaps_off, barmerge.lookahead_off)
+wkEma21       = request.security(syminfo.tickerid, "W", ta.ema(close, 21),
+     barmerge.gaps_off, barmerge.lookahead_off)
+wkEma200      = request.security(syminfo.tickerid, "W", ta.ema(close, 200),
+     barmerge.gaps_off, barmerge.lookahead_off)
+wkClose       = request.security(syminfo.tickerid, "W", close,
+     barmerge.gaps_off, barmerge.lookahead_off)
+wkADX         = request.security(syminfo.tickerid, "W", f_adx(14),
+     barmerge.gaps_off, barmerge.lookahead_off)
+
+wkBullish     = nz(wkEma9) > nz(wkEma21) and nz(wkClose) > nz(wkEma200)
+wkTrendStr    = wkBullish ? "bullish" : "neutral"
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 4 — REGIME DETECTION
+// ════════════════════════════════════════════════════════════════════════
+
+// trending_up: strong directional trend with price above long-term EMA
+regimeTrendUp = adx > adxTrendThr and diPlus > diMinus and close > ema200
+
+// ranging: ADX below range threshold for N consecutive bars
+adxBelowRange = adx < adxRangeThr
+var int adxQuietCount = 0
+adxQuietCount := adxBelowRange ? adxQuietCount + 1 : 0
+regimeRanging = adxQuietCount >= adxQuietBars
+
+// volatile_breakout: ADX crossing above trend threshold + volume spike
+adxCrossUp    = ta.crossover(adx, adxTrendThr)
+adxRecentCross = adxCrossUp or adxCrossUp[1] or adxCrossUp[2]
+regimeBreakout = adxRecentCross and volSpike
+
+// Assign regime label (priority: trending > breakout > ranging)
+regimeStr     = regimeTrendUp ? "trending_up" :
+     regimeBreakout ? "volatile_breakout" :
+     regimeRanging ? "ranging" : "neutral"
+regimeInt     = regimeTrendUp ? 1 : regimeBreakout ? 2 : regimeRanging ? 3 : 0
+
+// Regime background color
+regimeColor   = regimeTrendUp ? color.new(color.green, 92) :
+     regimeBreakout ? color.new(color.orange, 92) :
+     regimeRanging ? color.new(color.blue, 92) :
+     color.new(color.gray, 96)
+bgcolor(showRegimeBG ? regimeColor : na, title="Regime Background")
+
+// Ticker cluster detection (auto-detect uses ADX volatility over 50 bars)
+adxAvg50      = ta.sma(adx, 50)
+autoCluster   = adxAvg50 > 22 ? "Momentum" : "Trend"
+activeCluster = tickerCluster == "Auto-detect" ? autoCluster : tickerCluster
+useModeB      = activeCluster == "Momentum" or activeCluster == "Auto-detect"
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 5 — MODE A: TREND CONTINUATION LONG
+// ════════════════════════════════════════════════════════════════════════
+
+// Gate: ALL conditions must be true
+modeA_ema     = ema9 > ema21
+modeA_rsi     = rsi >= rsiLoEntry and rsi <= rsiHiEntry
+modeA_near    = pctFromHigh <= pullbackPct
+modeA_above   = close > ema200
+modeA_adx     = adx > adxTrendThr
+modeA_vol     = volAboveAvg
+modeA_regime  = regimeTrendUp
+modeA_weekly  = wkBullish
+
+modeA_gate    = modeA_ema and modeA_rsi and modeA_near and modeA_above
+     and modeA_adx and modeA_vol and modeA_regime and modeA_weekly
+
+// Evidence-weighted composite scoring (max 100)
+modeA_score   = modeA_gate ? 0.0 : 0.0
+modeA_score  := not modeA_gate ? 0.0 :
+     (modeA_ema ? 25.0 : 0.0) +
+     (rsi >= 60 and rsi <= 70 ? 25.0 : rsi >= rsiLoEntry and rsi <= rsiHiEntry ? 15.0 : 0.0) +
+     (modeA_above ? 20.0 : 0.0) +
+     (wkBullish ? 15.0 : 0.0) +
+     (volume > volSMA20 ? 5.0 : 0.0) +
+     (macdHist > 0 ? 5.0 : 0.0) +
+     (adx > 30 ? 5.0 : 0.0)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 6 — MODE B: BREAKOUT LONG
+// ════════════════════════════════════════════════════════════════════════
+
+// Gate conditions
+modeB_break   = close > donchianHi[1]
+modeB_vol     = volSpike
+modeB_adx     = adxRecentCross
+modeB_rsi     = rsi > 50
+modeB_cluster = useModeB
+
+modeB_gate    = modeB_break and modeB_vol and modeB_adx and modeB_rsi and modeB_cluster
+
+// Composite scoring (same framework)
+modeB_score   = not modeB_gate ? 0.0 :
+     (ema9 > ema21 ? 25.0 : 0.0) +
+     (rsi > 50 ? 25.0 : rsi > 40 ? 15.0 : 0.0) +
+     (close > ema200 ? 20.0 : 0.0) +
+     (wkBullish ? 15.0 : 0.0) +
+     (volSpike ? 5.0 : 0.0) +
+     (macdHist > 0 ? 5.0 : 0.0) +
+     (adx > 30 ? 5.0 : 0.0)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 7 — MODE C: IRON CONDOR / NEUTRAL OPPORTUNITY
+// ════════════════════════════════════════════════════════════════════════
+
+modeC_gate    = regimeRanging
+
+// Support/resistance from Bollinger + Donchian
+modeC_resist  = math.max(bbUp, donchianHi)
+modeC_support = math.min(bbLo, donchianLo)
+
+// Scoring: range confirmation + width
+modeC_score   = not modeC_gate ? 0.0 :
+     (adxQuietCount >= adxQuietBars ? 25.0 : 0.0) +
+     (adx < 15 ? 15.0 : adx < adxRangeThr ? 10.0 : 0.0) +
+     (bbWidth < 5.0 ? 15.0 : bbWidth < 8.0 ? 10.0 : 0.0) +
+     (nz(wkADX) < 25 ? 10.0 : 0.0) +
+     (math.abs(rsi - 50) < 10 ? 10.0 : 0.0)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 8 — WINNER SELECTION + QUALITY FILTERS
+// ════════════════════════════════════════════════════════════════════════
+
+// Pick best mode
+bestScore     = math.max(modeA_score, math.max(modeB_score, modeC_score))
+bestMode      = modeA_score >= modeB_score and modeA_score >= modeC_score and modeA_score > 0 ? 1 :
+     modeB_score >= modeC_score and modeB_score > 0 ? 2 :
+     modeC_score > 0 ? 3 : 0
+
+// Mode-specific minimum score
+meetsMinScore = (bestMode == 1 and bestScore >= minScoreA) or
+     (bestMode == 2 and bestScore >= minScoreB) or
+     (bestMode == 3 and bestScore >= minScoreC)
+
+// Quality filters
+atrInRange    = atrPct >= atrMinPct and atrPct <= atrMaxPct
+var int lastSignalBar = 0
+cooldownOk    = bar_index - lastSignalBar >= cooldownBars
+
+// Fire signal
+fireEntry     = barstate.isconfirmed and meetsMinScore and bestMode > 0
+     and atrInRange and cooldownOk
+
+// Mode labels for output
+bestModeStr   = bestMode == 1 ? "trend_continuation" :
+     bestMode == 2 ? "breakout" :
+     bestMode == 3 ? "iron_condor" : "none"
+bestAction    = bestMode == 1 ? "LONG_ENTRY" :
+     bestMode == 2 ? "LONG_ENTRY" :
+     bestMode == 3 ? "NEUTRAL_ENTRY" : ""
+optionsGuide  = bestMode == 1 ? "directional_long" :
+     bestMode == 2 ? "breakout_long" :
+     bestMode == 3 ? "sell_premium" : ""
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 9 — EXIT SIGNALS
+// ════════════════════════════════════════════════════════════════════════
+
+// Track position state
+var int entryBar    = 0
+var bool inPosition = false
+
+// Stop loss: close below EMA(21) for N consecutive bars
+closeBelowEma21     = close < ema21
+var int belowCount  = 0
+belowCount         := closeBelowEma21 ? belowCount + 1 : 0
+exitStop            = inPosition and belowCount >= emaExitBars
+
+// Take profit: RSI overbought
+exitTP              = inPosition and rsi > rsiExitHi
+
+// Time stop: max hold bars exceeded
+barsInTrade         = inPosition ? bar_index - entryBar : 0
+exitTime            = inPosition and barsInTrade >= maxHoldBars
+
+// Regime exit: regime changed from trending_up
+exitRegime          = inPosition and not regimeTrendUp and entryBar > 0
+
+// Combined exit
+exitSignal          = exitStop or exitTP or exitTime or exitRegime
+exitReason          = exitStop ? "stop_loss" :
+     exitTP ? "take_profit" :
+     exitTime ? "time_stop" :
+     exitRegime ? "regime_change" : ""
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 10 — STRATEGY ENTRIES + EXITS (TradingView Backtester)
+// ════════════════════════════════════════════════════════════════════════
+
+// Entry
+if fireEntry and (bestMode == 1 or bestMode == 2)
+    strategy.entry("Long", strategy.long)
+    lastSignalBar := bar_index
+    entryBar      := bar_index
+    inPosition    := true
+    belowCount    := 0
+
+// Mode C is informational only — no strategy entry
+if fireEntry and bestMode == 3
+    lastSignalBar := bar_index
+
+// Exit
+if exitSignal
+    strategy.close("Long", comment=exitReason)
+    inPosition    := false
+    entryBar      := 0
+    belowCount    := 0
+
+// Also reset if strategy has no position (catches edge cases)
+if strategy.position_size == 0 and inPosition
+    inPosition    := false
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 11 — VISUAL MARKERS
+// ════════════════════════════════════════════════════════════════════════
+
+// Mode A: green triangle below bar
+plotshape(fireEntry and bestMode == 1 and not showLabels, "Trend Long",
+     shape.triangleup, location.belowbar, color=color.green, size=size.small)
+plotshape(fireEntry and bestMode == 1 and showLabels, "Trend Long Label",
+     shape.labelup, location.belowbar, color=color.green,
+     text="A", textcolor=color.white, size=size.small)
+
+// Mode B: teal triangle below bar
+plotshape(fireEntry and bestMode == 2 and not showLabels, "Breakout Long",
+     shape.triangleup, location.belowbar, color=color.teal, size=size.small)
+plotshape(fireEntry and bestMode == 2 and showLabels, "Breakout Long Label",
+     shape.labelup, location.belowbar, color=color.teal,
+     text="B", textcolor=color.white, size=size.small)
+
+// Mode C: blue diamond above bar
+plotshape(fireEntry and bestMode == 3 and not showLabels, "Iron Condor",
+     shape.diamond, location.abovebar, color=color.blue, size=size.small)
+plotshape(fireEntry and bestMode == 3 and showLabels, "Iron Condor Label",
+     shape.labeldown, location.abovebar, color=color.blue,
+     text="IC", textcolor=color.white, size=size.small)
+
+// Exit: red X above bar
+plotshape(exitSignal, "Exit Signal",
+     shape.xcross, location.abovebar, color=color.red, size=size.small)
+
+// Conviction label on signal bars
+if fireEntry and showLabels
+    label.new(bar_index, high * 1.002,
+         str.tostring(bestScore, "#"),
+         color=bestMode == 1 ? color.green : bestMode == 2 ? color.teal : color.blue,
+         textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ── EMA plots ──
+plot(ema9,   "EMA 9",   color=color.new(color.orange, 30), linewidth=1)
+plot(ema21,  "EMA 21",  color=color.new(color.blue, 30),   linewidth=1)
+plot(ema200, "EMA 200", color=color.new(color.white, 50),   linewidth=2)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 12 — DASHBOARD TABLE
+// ════════════════════════════════════════════════════════════════════════
+
+var tbl = table.new(position.top_right, 4, 10,
+     border_color=color.gray, border_width=1,
+     frame_color=color.gray, frame_width=2)
+
+daysSinceSignal = bar_index - lastSignalBar
+
+if barstate.islast and showDashboard
+    // Row 0: Header
+    table.cell(tbl, 0, 0, syminfo.ticker,
+         bgcolor=color.black, text_color=color.white, text_size=size.normal)
+    table.cell(tbl, 1, 0, "V6",
+         bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 2, 0, activeCluster,
+         bgcolor=color.navy, text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 3, 0, "Score",
+         bgcolor=color.black, text_color=color.white, text_size=size.small)
+
+    // Row 1: Regime
+    regClr = regimeTrendUp ? color.green :
+         regimeBreakout ? color.orange :
+         regimeRanging ? color.blue : color.gray
+    table.cell(tbl, 0, 1, "REGIME",
+         bgcolor=color.maroon, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 1, regimeStr,
+         text_color=regClr, text_size=size.small)
+    table.cell(tbl, 2, 1, "ADX " + str.tostring(adx, "#"),
+         text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 1, str.tostring(bestScore, "#"),
+         text_color=bestScore >= minScoreA ? color.green : color.gray, text_size=size.small)
+
+    // Row 2: RSI
+    rsiClr = rsi >= rsiLoEntry and rsi <= rsiHiEntry ? color.green :
+         rsi > rsiExitHi ? color.red : color.gray
+    table.cell(tbl, 0, 2, "RSI",
+         bgcolor=color.new(color.purple, 60), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 2, str.tostring(rsi, "0.#"),
+         text_color=rsiClr, text_size=size.small)
+    table.cell(tbl, 2, 2, rsi >= rsiLoEntry and rsi <= rsiHiEntry ? "IN ZONE" : "OUT",
+         text_color=rsiClr, text_size=size.tiny)
+    table.cell(tbl, 3, 2, str.tostring(rsiLoEntry) + "-" + str.tostring(rsiHiEntry),
+         text_color=color.gray, text_size=size.tiny)
+
+    // Row 3: ADX / DI
+    table.cell(tbl, 0, 3, "ADX/DI",
+         bgcolor=color.new(color.purple, 60), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 3, str.tostring(adx, "0.#"),
+         text_color=adx > adxTrendThr ? color.green : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 3, "+DI " + str.tostring(diPlus, "#"),
+         text_color=diPlus > diMinus ? color.green : color.red, text_size=size.tiny)
+    table.cell(tbl, 3, 3, "-DI " + str.tostring(diMinus, "#"),
+         text_color=color.gray, text_size=size.tiny)
+
+    // Row 4: EMAs
+    emaStatus = ema9 > ema21 ? "9>21 OK" : "9<21 NO"
+    ema200Status = close > ema200 ? ">200 OK" : "<200 NO"
+    table.cell(tbl, 0, 4, "EMA",
+         bgcolor=color.new(color.purple, 60), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 4, emaStatus,
+         text_color=ema9 > ema21 ? color.green : color.red, text_size=size.small)
+    table.cell(tbl, 2, 4, ema200Status,
+         text_color=close > ema200 ? color.green : color.red, text_size=size.tiny)
+    table.cell(tbl, 3, 4, str.tostring(pctFromHigh, "0.#") + "% hi",
+         text_color=pctFromHigh <= pullbackPct ? color.green : color.gray, text_size=size.tiny)
+
+    // Row 5: Weekly trend
+    table.cell(tbl, 0, 5, "WEEKLY",
+         bgcolor=color.new(color.teal, 60), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 5, wkTrendStr,
+         text_color=wkBullish ? color.green : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 5, "wkADX " + str.tostring(nz(wkADX), "#"),
+         text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 5, wkBullish ? "CONFIRMED" : "WAIT",
+         text_color=wkBullish ? color.green : color.red, text_size=size.tiny)
+
+    // Row 6: separator
+    table.cell(tbl, 0, 6, "", bgcolor=color.black)
+    table.cell(tbl, 1, 6, "", bgcolor=color.black)
+    table.cell(tbl, 2, 6, "", bgcolor=color.black)
+    table.cell(tbl, 3, 6, "", bgcolor=color.black)
+
+    // Row 7: Active mode + scores
+    table.cell(tbl, 0, 7, "MODE",
+         bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 7, bestModeStr,
+         text_color=bestMode > 0 ? color.green : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 7, meetsMinScore and atrInRange ? "READY" : "WAIT",
+         text_color=meetsMinScore and atrInRange ? color.green : color.gray, text_size=size.small)
+    table.cell(tbl, 3, 7, cooldownOk ? "CD OK" : "CD " + str.tostring(cooldownBars - (bar_index - lastSignalBar)),
+         text_color=cooldownOk ? color.green : color.red, text_size=size.tiny)
+
+    // Row 8: Signal age
+    table.cell(tbl, 0, 8, "SIGNAL",
+         bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 8, inPosition ? "IN TRADE" : "FLAT",
+         text_color=inPosition ? color.yellow : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 8, str.tostring(daysSinceSignal) + " bars ago",
+         text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 8, inPosition ? str.tostring(barsInTrade) + "/" + str.tostring(maxHoldBars) : "",
+         text_color=barsInTrade > maxHoldBars * 0.8 ? color.red : color.gray, text_size=size.tiny)
+
+    // Row 9: ATR filter status
+    table.cell(tbl, 0, 9, "ATR",
+         bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 9, str.tostring(atr, "0.##"),
+         text_color=color.white, text_size=size.small)
+    table.cell(tbl, 2, 9, str.tostring(atrPct, "0.#") + "%",
+         text_color=atrInRange ? color.green : color.red, text_size=size.small)
+    table.cell(tbl, 3, 9, atrInRange ? "OK" : "SKIP",
+         text_color=atrInRange ? color.green : color.red, text_size=size.tiny)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 13 — ALERT CONDITIONS
+// ════════════════════════════════════════════════════════════════════════
+
+alertcondition(fireEntry and bestMode == 1,
+     title="Mode A: Trend Long",
+     message="V6 TREND LONG on {{ticker}} | Score={{plot_0}}")
+alertcondition(fireEntry and bestMode == 2,
+     title="Mode B: Breakout Long",
+     message="V6 BREAKOUT LONG on {{ticker}}")
+alertcondition(fireEntry and bestMode == 3,
+     title="Mode C: Iron Condor",
+     message="V6 IRON CONDOR opportunity on {{ticker}}")
+alertcondition(exitSignal,
+     title="Exit Signal",
+     message="V6 EXIT on {{ticker}}")
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SECTION 14 — WEBHOOK JSON PAYLOAD
+// ════════════════════════════════════════════════════════════════════════
+
+// Build and fire JSON alert on entry signals
+if fireEntry
+    safeTicker = str.replace_all(syminfo.ticker, '"', '\\"')
+    safeToken  = str.replace_all(webhookToken, '"', '\\"')
+
+    entryPayload = '{' +
+         '"token":"' + safeToken + '",' +
+         '"ticker":"' + safeTicker + '",' +
+         '"action":"' + bestAction + '",' +
+         '"mode":"' + bestModeStr + '",' +
+         '"conviction":' + str.tostring(bestScore, "0.#") + ',' +
+         '"regime":"' + regimeStr + '",' +
+         '"entry_price":' + str.tostring(close, "0.##") + ',' +
+         '"stop_level":' + str.tostring(ema21, "0.##") + ',' +
+         '"atr":' + str.tostring(atr, "0.##") + ',' +
+         '"atr_pct":' + str.tostring(atrPct, "0.##") + ',' +
+         '"rsi":' + str.tostring(rsi, "0.#") + ',' +
+         '"adx":' + str.tostring(adx, "0.#") + ',' +
+         '"di_plus":' + str.tostring(diPlus, "0.#") + ',' +
+         '"di_minus":' + str.tostring(diMinus, "0.#") + ',' +
+         '"pct_from_high":' + str.tostring(pctFromHigh, "0.##") + ',' +
+         '"macd_hist":' + str.tostring(macdHist, "0.##") + ',' +
+         '"suggested_hold_days":10,' +
+         '"weekly_trend":"' + wkTrendStr + '",' +
+         '"cluster":"' + activeCluster + '",' +
+         '"options_guidance":"' + optionsGuide + '",' +
+         '"exit_reason":"",' +
+         '"bb_upper":' + str.tostring(bbUp, "0.##") + ',' +
+         '"bb_lower":' + str.tostring(bbLo, "0.##") + ',' +
+         '"bb_width":' + str.tostring(bbWidth, "0.#") + ',' +
+         '"timeframe":"' + timeframe.period + '",' +
+         '"bar_time":' + str.tostring(time) +
+         '}'
+
+    alert(entryPayload, alert.freq_once_per_bar_close)
+
+// Build and fire JSON alert on exit signals
+if exitSignal
+    safeTicker2 = str.replace_all(syminfo.ticker, '"', '\\"')
+    safeToken2  = str.replace_all(webhookToken, '"', '\\"')
+
+    exitPayload = '{' +
+         '"token":"' + safeToken2 + '",' +
+         '"ticker":"' + safeTicker2 + '",' +
+         '"action":"EXIT",' +
+         '"mode":"exit",' +
+         '"conviction":0,' +
+         '"regime":"' + regimeStr + '",' +
+         '"entry_price":0,' +
+         '"stop_level":0,' +
+         '"atr":' + str.tostring(atr, "0.##") + ',' +
+         '"rsi":' + str.tostring(rsi, "0.#") + ',' +
+         '"adx":' + str.tostring(adx, "0.#") + ',' +
+         '"exit_reason":"' + exitReason + '",' +
+         '"bars_in_trade":' + str.tostring(barsInTrade) + ',' +
+         '"bar_time":' + str.tostring(time) +
+         '}'
+
+    alert(exitPayload, alert.freq_once_per_bar_close)
