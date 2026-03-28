@@ -1,74 +1,21 @@
-# Portfolio Scanner V5 - .gitignore
-
-# OS generated files
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# IDE / Editor files
+# Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.project
-.settings/
 
-# TradingView specific
-# Pine Script compiled outputs (if any local tools generate them)
-*.compiled
-
-# Node.js (if using any JS-based tooling)
-node_modules/
-npm-debug.log*
-
-# Python (if using any Python-based analysis tools)
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.eggs/
-dist/
-build/
-*.egg
-.venv/
-venv/
-env/
-
-# Secrets and credentials
+# Secrets
 .env
-.env.local
-.env.*.local
 *.key
 *.pem
-secrets/
-credentials/
 
-# Backtest data (large files)
-tests/backtest_results/*.csv
-tests/backtest_results/*.xlsx
-tests/backtest_results/*.json
-!tests/backtest_results/.gitkeep
-
-# Research data (large datasets)
-research/analysis/*.csv
-research/analysis/*.xlsx
-!research/analysis/.gitkeep
-
-# Temporary files
+# Temporary
 *.tmp
-*.temp
 *.log
 *.bak
-*.orig
-
-# Archives
-*.zip
-*.tar.gz
-*.rar
-*.7z
