@@ -10,3 +10,4 @@ venv/
 data/
 *.egg-info/
 output/
+reports/
