@@ -1,0 +1,50 @@
+{
+  "trend": {
+    "tickers": [
+      "SPY",
+      "QQQ",
+      "AMZN",
+      "MSFT",
+      "INTC",
+      "JNJ"
+    ],
+    "params": {
+      "rsi_lo": 55,
+      "rsi_hi": 80,
+      "adx_thr": 30,
+      "ema_fast": 21,
+      "ema_slow": 50,
+      "min_score": 65,
+      "pullback_pct": 1.0,
+      "atr_stop_mult": 2.0
+    },
+    "oos_sharpe": 1.447,
+    "is_sharpe": 0.999,
+    "degradation": 1.448,
+    "robustness": "MODERATE (some sensitivity but reasonable plateau)"
+  },
+  "momentum": {
+    "tickers": [
+      "AMD",
+      "NVDA",
+      "TSLA",
+      "AAPL",
+      "NFLX",
+      "PLTR"
+    ],
+    "params": {
+      "rsi_lo": 55,
+      "rsi_hi": 70,
+      "adx_thr": 30,
+      "ema_fast": 9,
+      "ema_slow": 50,
+      "min_score": 75,
+      "pullback_pct": 1.0,
+      "atr_stop_mult": 2.5
+    },
+    "oos_sharpe": 2.518,
+    "is_sharpe": 2.518,
+    "degradation": 1.0,
+    "robustness": "MODERATE (some sensitivity but reasonable plateau)"
+  }
+}
