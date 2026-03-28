@@ -6,6 +6,7 @@ import struct
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
@@ -27,7 +28,12 @@ def load_tradingview_csv(filepath: str | Path) -> pd.DataFrame:
 
     # TradingView exports use "time" or "Date" for the date column
     date_col = _find_date_column(df)
-    df[date_col] = pd.to_datetime(df[date_col])
+    # TradingView "time" column is often a Unix timestamp (seconds since epoch)
+    sample = df[date_col].iloc[0]
+    if isinstance(sample, (int, float, np.integer, np.floating)) and sample > 1e8:
+        df[date_col] = pd.to_datetime(df[date_col], unit="s")
+    else:
+        df[date_col] = pd.to_datetime(df[date_col])
     df = df.rename(columns={date_col: "Date"}).set_index("Date").sort_index()
 
     # Normalize column names
@@ -200,25 +206,35 @@ def _try_binary_dly(data: bytes) -> pd.DataFrame | None:
 
 def _try_csv_dly(filepath: Path) -> pd.DataFrame:
     """Fallback: parse .dly as a CSV/text file."""
-    df = pd.read_csv(filepath, header=None)
+    # Peek at first line to detect header
+    first_line = filepath.read_text().split("\n", 1)[0]
+    has_header = "Date" in first_line or "date" in first_line
 
-    # Expected columns: Date, Open, High, Low, Close, Volume, OpenInterest
-    if df.shape[1] >= 7:
-        df.columns = ["Date", "Open", "High", "Low", "Close", "Volume", "OpenInterest"] + \
-                      [f"extra_{i}" for i in range(df.shape[1] - 7)]
-        df = df[["Date", "Open", "High", "Low", "Close", "Volume", "OpenInterest"]]
-    elif df.shape[1] >= 5:
-        cols = ["Date", "Open", "High", "Low", "Close"]
-        if df.shape[1] >= 6:
-            cols.append("Volume")
-        if df.shape[1] >= 7:
-            cols.append("OpenInterest")
-        df.columns = cols[:df.shape[1]]
+    if has_header:
+        df = pd.read_csv(filepath, skipinitialspace=True)
+        # Normalize column names (strip whitespace)
+        df.columns = [c.strip() for c in df.columns]
     else:
-        raise ValueError(f"Unexpected column count ({df.shape[1]}) in {filepath}")
+        df = pd.read_csv(filepath, header=None)
+        # Assign standard column names
+        if df.shape[1] >= 7:
+            df.columns = ["Date", "Open", "High", "Low", "Close", "Volume", "OpenInterest"] + \
+                          [f"extra_{i}" for i in range(df.shape[1] - 7)]
+        elif df.shape[1] >= 5:
+            cols = ["Date", "Open", "High", "Low", "Close"]
+            if df.shape[1] >= 6:
+                cols.append("Volume")
+            if df.shape[1] >= 7:
+                cols.append("OpenInterest")
+            df.columns = cols[:df.shape[1]]
+        else:
+            raise ValueError(f"Unexpected column count ({df.shape[1]}) in {filepath}")
 
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date").sort_index()
+
+    keep = [c for c in ["Open", "High", "Low", "Close", "Volume", "OpenInterest"] if c in df.columns]
+    df = df[keep]
     return df
 
 
