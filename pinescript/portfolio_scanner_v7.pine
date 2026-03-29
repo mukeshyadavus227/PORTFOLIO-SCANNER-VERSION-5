@@ -25,9 +25,6 @@ indicator("Portfolio Scanner V7 [Webhook]", overlay=true, max_labels_count=50)
 minScore      = input.int(75, "Min Score (Promoted)", minval=50, maxval=95, step=5,
      group="Master Controls",
      tooltip="Score >= this fires alert. 75=production, 65=loose")
-watchlistScore = input.int(60, "Min Score (Watchlist)", minval=40, maxval=75, step=5,
-     group="Master Controls",
-     tooltip="Score >= this shows visual marker but no alert")
 cooldownBars  = input.int(5, "Cooldown (bars)", minval=1, maxval=30,
      group="Master Controls")
 longOnlyMode  = input.bool(true, "Long-Only Mode",
@@ -37,11 +34,6 @@ shortMinScore = input.int(85, "Short Min Score (if shorts enabled)", minval=70, 
      group="Master Controls")
 showDashboard = input.bool(true, "Show Dashboard",
      group="Master Controls")
-showLabels    = input.bool(true, "Show Signal Labels",
-     group="Master Controls")
-showSuppressed = input.bool(false, "Show Suppressed Signals",
-     group="Master Controls",
-     tooltip="Show gray markers where V4 fires but V6 blocks — useful for debugging")
 showRegimeBG  = input.bool(true, "Show Regime Background",
      group="Master Controls")
 webhookToken  = input.string("mukesh-tv-2026", "Webhook Token",
@@ -458,13 +450,8 @@ atrInRange    = atrPct >= atrMinPct and atrPct <= atrMaxPct
 var int lastSignalBar = 0
 cooldownOk    = bar_index - lastSignalBar >= cooldownBars
 
-// Tier classification
+// Fire or not — simple
 isPromoted    = v4_hasSignal and v6_composite >= minScore and dirOk and shortScoreOk and atrInRange and cooldownOk and barstate.isconfirmed
-isWatchlist   = v4_hasSignal and v6_composite >= watchlistScore and v6_composite < minScore and dirOk and shortScoreOk and atrInRange and barstate.isconfirmed
-isSuppressed  = v4_hasSignal and (v6_composite < watchlistScore or not dirOk or not shortScoreOk) and barstate.isconfirmed
-
-// Signal type labels
-signalTier    = isPromoted ? "PROMOTED" : isWatchlist ? "WATCHLIST" : isSuppressed ? "SUPPRESSED" : "NONE"
 bestAction    = v4_rawDir == "BUY" ? "LONG_ENTRY" : "SHORT_ENTRY"
 optionsGuide  = v4_rawStrat == 2 ? "breakout_long" :
      v4_rawStrat == 1 ? "sell_premium" : "directional_long"
@@ -522,54 +509,17 @@ plot(s2_entryHigh, "DC High", color=color.new(color.green, 70), linewidth=1)
 plot(s2_entryLow, "DC Low", color=color.new(color.red, 70), linewidth=1)
 
 // ── PROMOTED signals (large markers, alert fires) ──
-// Long: strategy-colored
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat != 2 and not showLabels,
-     "Promoted Long", shape.triangleup, location.belowbar, color=color.green, size=size.normal)
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat == 2 and not showLabels,
-     "Promoted Breakout", shape.triangleup, location.belowbar, color=color.teal, size=size.normal)
-plotshape(isPromoted and v4_rawDir == "SELL" and not showLabels,
-     "Promoted Short", shape.triangledown, location.abovebar, color=color.red, size=size.normal)
+// ── LONG ENTRY (alert fires) ──
+plotshape(isPromoted and v4_rawDir == "BUY", "Long Entry",
+     shape.triangleup, location.belowbar, color=color.green, size=size.normal)
 
-// Labeled versions
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat == 1 and showLabels,
-     "Promoted MR", shape.labelup, location.belowbar, color=color.green,
-     text="MR", textcolor=color.white, size=size.small)
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat == 2 and showLabels,
-     "Promoted BRK", shape.labelup, location.belowbar, color=color.lime,
-     text="BRK", textcolor=color.black, size=size.small)
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat == 3 and showLabels,
-     "Promoted MOM", shape.labelup, location.belowbar, color=color.aqua,
-     text="MOM", textcolor=color.black, size=size.small)
-plotshape(isPromoted and v4_rawDir == "BUY" and v4_rawStrat == 4 and showLabels,
-     "Promoted MTF", shape.labelup, location.belowbar, color=color.teal,
-     text="MTF", textcolor=color.white, size=size.small)
-plotshape(isPromoted and v4_rawDir == "SELL" and showLabels,
-     "Promoted Short Lbl", shape.labeldown, location.abovebar, color=color.red,
-     text="S", textcolor=color.white, size=size.small)
-
-// ── WATCHLIST signals (small markers, no alert) ──
-plotshape(isWatchlist and v4_rawDir == "BUY",
-     "Watchlist Long", shape.triangleup, location.belowbar,
-     color=color.new(color.green, 50), size=size.tiny)
-plotshape(isWatchlist and v4_rawDir == "SELL",
-     "Watchlist Short", shape.triangledown, location.abovebar,
-     color=color.new(color.red, 50), size=size.tiny)
-
-// ── SUPPRESSED signals (gray, debug only) ──
-plotshape(isSuppressed and showSuppressed,
-     "Suppressed", shape.triangleup, location.belowbar,
-     color=color.new(color.gray, 60), size=size.tiny)
+// ── SHORT ENTRY (alert fires, only when long-only mode is OFF) ──
+plotshape(isPromoted and v4_rawDir == "SELL", "Short Entry",
+     shape.triangledown, location.abovebar, color=color.red, size=size.normal)
 
 // ── EXIT signal ──
 plotshape(exitSignal, "Exit", shape.xcross, location.abovebar,
      color=color.red, size=size.small)
-
-// ── Conviction label on promoted signals ──
-if isPromoted and showLabels
-    label.new(bar_index, high * 1.002,
-         str.tostring(v6_composite, "#") + " " + stratName(v4_rawStrat),
-         color=color.new(color.black, 30), textcolor=color.white,
-         style=label.style_label_down, size=size.tiny)
 
 
 // ════════════════════════════════════════════════════════════════════════
@@ -673,14 +623,13 @@ if barstate.islast and showDashboard
     table.cell(tbl, 3, 8, "max 100",
          text_color=color.gray, text_size=size.tiny)
 
-    // Row 9: V7 Action (final decision)
-    tierClr = isPromoted ? color.green : isWatchlist ? color.yellow : isSuppressed ? color.red : color.gray
-    table.cell(tbl, 0, 9, "V7 ACTION",
+    // Row 9: Signal status
+    table.cell(tbl, 0, 9, "SIGNAL",
          bgcolor=color.new(color.teal, 40), text_color=color.white, text_size=size.small)
-    table.cell(tbl, 1, 9, signalTier,
-         text_color=tierClr, text_size=size.small)
-    table.cell(tbl, 2, 9, isPromoted ? "FIRE" : isWatchlist ? "WATCH" : "—",
-         text_color=tierClr, text_size=size.small)
+    table.cell(tbl, 1, 9, isPromoted ? "FIRE" : v4_hasSignal ? "BLOCKED" : "—",
+         text_color=isPromoted ? color.green : v4_hasSignal ? color.red : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 9, isPromoted ? v4_rawDir : "—",
+         text_color=isPromoted ? color.green : color.gray, text_size=size.small)
     table.cell(tbl, 3, 9, cooldownOk ? "CD OK" : "CD " + str.tostring(cooldownBars - (bar_index - lastSignalBar)),
          text_color=cooldownOk ? color.green : color.red, text_size=size.tiny)
 
@@ -763,7 +712,7 @@ if isPromoted
          '"strategy":"' + stratName(v4_rawStrat) + '",' +
          '"v4_score":' + str.tostring(v4_rawScore, "0.#") + ',' +
          '"v6_composite":' + str.tostring(v6_composite, "0.#") + ',' +
-         '"tier":"promoted",' +
+         '"sec_type":"OPT",' +
          '"regime":"' + regimeStr + '",' +
          '"regime_conf":' + str.tostring(regimeConf, "0.#") + ',' +
          '"entry_price":' + str.tostring(close, "0.##") + ',' +
