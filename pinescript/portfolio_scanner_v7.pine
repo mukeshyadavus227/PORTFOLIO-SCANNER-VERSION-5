@@ -249,17 +249,11 @@ regimeMeanRev  = meanRevScore >= 60
 regimeMomentum = momentumScore_r >= 40 and not regimeBreakout and not regimeTrend and not regimeMeanRev
 
 regime        = regimeBreakout ? 2 : regimeTrend ? 4 : regimeMomentum ? 3 : regimeMeanRev ? 1 : 0
-regimeStr     = regime == 1 ? "MEAN_REV" : regime == 2 ? "BREAKOUT" :
-     regime == 3 ? "MOMENTUM" : regime == 4 ? "TRENDING" : "NEUTRAL"
-regimeConf    = regime == 1 ? meanRevScore : regime == 2 ? breakoutScore :
-     regime == 3 ? momentumScore_r : regime == 4 ? trendScore : 0.0
+regimeStr     = regime == 1 ? "MEAN_REV" : regime == 2 ? "BREAKOUT" : regime == 3 ? "MOMENTUM" : regime == 4 ? "TRENDING" : "NEUTRAL"
+regimeConf    = regime == 1 ? meanRevScore : regime == 2 ? breakoutScore : regime == 3 ? momentumScore_r : regime == 4 ? trendScore : 0.0
 
 // Background
-regimeColor   = regime == 4 ? color.new(color.green, 93) :
-     regime == 2 ? color.new(color.yellow, 93) :
-     regime == 3 ? color.new(color.blue, 93) :
-     regime == 1 ? color.new(color.purple, 93) :
-     color.new(color.gray, 96)
+regimeColor   = regime == 4 ? color.new(color.green, 93) : regime == 2 ? color.new(color.yellow, 93) : regime == 3 ? color.new(color.blue, 93) : regime == 1 ? color.new(color.purple, 93) : color.new(color.gray, 96)
 bgcolor(showRegimeBG ? regimeColor : na, title="Regime BG")
 
 // Cluster auto-detection
@@ -407,8 +401,7 @@ v4_rawDir     = v4_bestLong >= v4_bestShort ? "BUY" : "SELL"
 v4_hasSignal  = v4_rawScore > 0 and v4_rawStrat > 0
 
 stratName(_id) =>
-    _id == 1 ? "RSI_MeanRev" : _id == 2 ? "Donchian_Break" :
-    _id == 3 ? "EMA_Momentum" : _id == 4 ? "MTF_Trend" : "None"
+    _id == 1 ? "RSI_MeanRev" : _id == 2 ? "Donchian_Break" : _id == 3 ? "EMA_Momentum" : _id == 4 ? "MTF_Trend" : "None"
 
 
 // ════════════════════════════════════════════════════════════════════════
