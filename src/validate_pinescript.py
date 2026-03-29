@@ -30,20 +30,20 @@ from indicators import calc_ema, calc_rsi, calc_adx, calc_atr, calc_macd, calc_s
 # ═══════════════════════════════════════════════════════════════════════════
 
 V6 = {
-    # Master
-    "min_score_a": 70,
+    # Master (cluster-aware: Trend=65, Momentum=75)
+    "min_score_a": 65,
     "min_score_b": 65,
     "cooldown_bars": 5,
-    # Regime
-    "adx_trend_thr": 25,
+    # Regime (optimized: ADX 30 for both clusters)
+    "adx_trend_thr": 30,
     "adx_range_thr": 20,
     "adx_quiet_bars": 5,
-    # Mode A
+    # Mode A (optimized: RSI 55-80, EMA 9/50, pullback 1%)
     "rsi_lo_entry": 55,
-    "rsi_hi_entry": 75,
-    "pullback_pct": 2.0,
+    "rsi_hi_entry": 80,
+    "pullback_pct": 1.0,
     "ema_fast": 9,
-    "ema_slow": 21,
+    "ema_slow": 50,
     "ema_trend": 200,
     # Mode B
     "donchian_len": 20,

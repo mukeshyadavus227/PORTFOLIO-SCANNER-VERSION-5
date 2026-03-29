@@ -7,85 +7,85 @@ Larger divergences indicate a calculation bug.
 
 | Ticker | Trades | WR% | PF | Net PnL | Sharpe | Avg Bars |
 |--------|--------|-----|-----|---------|--------|----------|
-| SPY | 58 | 41.4 | 1.31 | $675.67 | 0.51 | 10.6 |
-| INTC | 89 | 42.7 | 1.4 | $4405.96 | 0.59 | 11.6 |
-| AMD | 59 | 42.4 | 1.34 | $4028.23 | 0.61 | 9.9 |
-| AMZN | 77 | 41.6 | 1.14 | $1185.61 | 0.25 | 9.9 |
-| QQQ | 39 | 46.2 | 1.37 | $757.72 | 0.63 | 8.7 |
+| SPY | 29 | 51.7 | 1.6 | $696.08 | 0.89 | 10.1 |
+| INTC | 60 | 53.3 | 1.93 | $5495.05 | 1.08 | 10.2 |
+| AMD | 50 | 58.0 | 1.8 | $6069.77 | 1.21 | 9.6 |
+| AMZN | 49 | 40.8 | 0.96 | $-213.31 | -0.07 | 9.2 |
+| QQQ | 20 | 50.0 | 1.76 | $628.01 | 1.21 | 9.4 |
 
-**Combined:** 322 trades, $11053.19 net PnL
+**Combined:** 208 trades, $12675.60 net PnL
 
 ## Per-Ticker Trade Details
 
 ### SPY
 
-- Mode A (Trend): 58 trades
-- Mode B (Breakout): 0 trades
-- Exit breakdown: {'regime_change': 37, 'time_stop': 11, 'stop_loss': 8, 'take_profit': 2}
+- Mode A (Trend): 28 trades
+- Mode B (Breakout): 1 trades
+- Exit breakdown: {'take_profit': 4, 'time_stop': 6, 'regime_change': 19}
 
 | Entry | Exit | Mode | Score | PnL | Bars | Exit Reason |
 |-------|------|------|-------|-----|------|-------------|
-| 2024-08-23 | 2024-08-23 | A | 80 | $17.72 | 0 | regime_change |
-| 2024-10-16 | 2024-10-29 | A | 95 | $12.84 | 9 | regime_change |
-| 2024-11-14 | 2024-11-14 | A | 95 | $-34.84 | 0 | regime_change |
-| 2025-07-14 | 2025-08-01 | A | 90 | $-14.68 | 14 | regime_change |
-| 2025-08-11 | 2025-08-21 | A | 85 | $-16.51 | 8 | regime_change |
+| 2023-07-31 | 2023-08-09 | A | 95 | $-119.70 | 7 | regime_change |
+| 2023-11-29 | 2023-12-28 | A | 85 | $192.30 | 20 | time_stop |
+| 2024-01-09 | 2024-01-17 | A | 90 | $1.10 | 5 | regime_change |
+| 2024-01-26 | 2024-02-20 | A | 85 | $88.60 | 16 | regime_change |
+| 2024-07-03 | 2024-07-10 | A | 90 | $110.67 | 4 | take_profit |
 
 ### INTC
 
-- Mode A (Trend): 83 trades
-- Mode B (Breakout): 6 trades
-- Exit breakdown: {'stop_loss': 21, 'take_profit': 16, 'regime_change': 31, 'time_stop': 21}
+- Mode A (Trend): 55 trades
+- Mode B (Breakout): 5 trades
+- Exit breakdown: {'take_profit': 17, 'regime_change': 33, 'time_stop': 10}
 
 | Entry | Exit | Mode | Score | PnL | Bars | Exit Reason |
 |-------|------|------|-------|-----|------|-------------|
-| 2023-11-28 | 2023-12-27 | A | 85 | $801.84 | 20 | time_stop |
-| 2025-08-18 | 2025-09-16 | B | 80 | $259.08 | 20 | time_stop |
+| 2021-02-25 | 2021-03-09 | A | 95 | $17.00 | 8 | regime_change |
+| 2021-04-12 | 2021-04-20 | A | 95 | $-405.23 | 6 | regime_change |
+| 2023-11-20 | 2023-12-19 | A | 90 | $324.18 | 20 | time_stop |
 | 2025-10-02 | 2025-10-30 | A | 90 | $607.21 | 20 | time_stop |
-| 2025-12-03 | 2025-12-10 | A | 95 | $-303.72 | 5 | regime_change |
-| 2026-01-12 | 2026-01-26 | B | 95 | $-201.24 | 9 | regime_change |
+| 2026-01-14 | 2026-01-26 | B | 100 | $-660.90 | 7 | regime_change |
 
 ### AMD
 
-- Mode A (Trend): 44 trades
-- Mode B (Breakout): 15 trades
-- Exit breakdown: {'regime_change': 23, 'stop_loss': 13, 'take_profit': 10, 'time_stop': 13}
+- Mode A (Trend): 30 trades
+- Mode B (Breakout): 20 trades
+- Exit breakdown: {'regime_change': 26, 'take_profit': 15, 'time_stop': 9}
 
 | Entry | Exit | Mode | Score | PnL | Bars | Exit Reason |
 |-------|------|------|-------|-----|------|-------------|
-| 2024-01-10 | 2024-01-19 | A | 95 | $793.95 | 6 | take_profit |
-| 2024-02-23 | 2024-03-19 | A | 90 | $-15.15 | 17 | stop_loss |
-| 2025-07-14 | 2025-07-28 | A | 80 | $968.04 | 10 | take_profit |
-| 2025-08-14 | 2025-08-20 | A | 95 | $-402.87 | 4 | stop_loss |
-| 2025-10-27 | 2025-11-07 | A | 85 | $-467.93 | 9 | stop_loss |
+| 2021-10-26 | 2021-11-04 | A | 90 | $577.00 | 7 | take_profit |
+| 2021-11-30 | 2021-12-06 | A | 85 | $-729.90 | 4 | regime_change |
+| 2023-12-12 | 2024-01-11 | A | 90 | $580.12 | 20 | time_stop |
+| 2025-06-25 | 2025-07-24 | B | 100 | $737.95 | 20 | time_stop |
+| 2025-10-16 | 2025-11-07 | A | 90 | $-60.33 | 16 | regime_change |
 
 ### AMZN
 
-- Mode A (Trend): 69 trades
-- Mode B (Breakout): 8 trades
-- Exit breakdown: {'take_profit': 11, 'stop_loss': 14, 'regime_change': 34, 'time_stop': 18}
+- Mode A (Trend): 44 trades
+- Mode B (Breakout): 5 trades
+- Exit breakdown: {'take_profit': 9, 'regime_change': 30, 'time_stop': 10}
 
 | Entry | Exit | Mode | Score | PnL | Bars | Exit Reason |
 |-------|------|------|-------|-----|------|-------------|
-| 2024-03-27 | 2024-04-18 | A | 75 | $-21.09 | 15 | stop_loss |
-| 2024-07-08 | 2024-07-16 | A | 90 | $-171.72 | 6 | stop_loss |
-| 2024-12-09 | 2024-12-27 | A | 85 | $-78.02 | 13 | regime_change |
-| 2025-07-08 | 2025-07-08 | A | 90 | $-102.44 | 0 | regime_change |
-| 2025-07-25 | 2025-08-01 | A | 90 | $-368.40 | 5 | regime_change |
+| 2020-08-19 | 2020-09-04 | A | 95 | $-15.88 | 12 | regime_change |
+| 2023-06-02 | 2023-07-03 | A | 85 | $208.60 | 20 | time_stop |
+| 2024-02-12 | 2024-02-16 | A | 90 | $-151.40 | 4 | regime_change |
+| 2024-04-10 | 2024-04-17 | A | 100 | $-43.50 | 5 | regime_change |
+| 2024-12-12 | 2024-12-23 | A | 85 | $-98.34 | 7 | regime_change |
 
 ### QQQ
 
-- Mode A (Trend): 39 trades
+- Mode A (Trend): 20 trades
 - Mode B (Breakout): 0 trades
-- Exit breakdown: {'regime_change': 28, 'take_profit': 5, 'time_stop': 6}
+- Exit breakdown: {'regime_change': 12, 'take_profit': 5, 'time_stop': 3}
 
 | Entry | Exit | Mode | Score | PnL | Bars | Exit Reason |
 |-------|------|------|-------|-----|------|-------------|
-| 2024-02-23 | 2024-02-28 | A | 90 | $-51.29 | 3 | regime_change |
-| 2024-06-21 | 2024-07-17 | A | 90 | $2.70 | 17 | regime_change |
-| 2024-12-18 | 2024-12-18 | A | 95 | $-171.21 | 0 | regime_change |
-| 2025-07-14 | 2025-08-05 | A | 85 | $53.34 | 16 | regime_change |
-| 2025-08-13 | 2025-08-20 | A | 90 | $-137.96 | 5 | regime_change |
+| 2023-06-02 | 2023-07-03 | A | 85 | $227.72 | 20 | time_stop |
+| 2023-07-13 | 2023-08-03 | A | 95 | $-32.51 | 15 | regime_change |
+| 2023-11-24 | 2023-12-22 | A | 95 | $221.64 | 20 | time_stop |
+| 2024-01-26 | 2024-02-16 | A | 85 | $64.32 | 15 | regime_change |
+| 2024-07-03 | 2024-07-17 | A | 80 | $-47.60 | 9 | regime_change |
 
 ## Repainting Risk Analysis
 
