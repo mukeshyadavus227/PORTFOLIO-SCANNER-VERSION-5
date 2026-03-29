@@ -1,0 +1,188 @@
+{
+  "SPY": {
+    "ticker": "SPY",
+    "direction": "excluded"
+  },
+  "QQQ": {
+    "ticker": "QQQ",
+    "direction": "excluded"
+  },
+  "IWM": {
+    "ticker": "IWM",
+    "direction": "excluded"
+  },
+  "SLV": {
+    "ticker": "SLV",
+    "direction": "long_only",
+    "long": {
+      "archetype": "momentum_breakout",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.812,
+      "oos_pf": 2.17
+    }
+  },
+  "GLD": {
+    "ticker": "GLD",
+    "direction": "long_only",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.867,
+      "oos_pf": 3.25
+    }
+  },
+  "XLE": {
+    "ticker": "XLE",
+    "direction": "long_only",
+    "long": {
+      "archetype": "momentum_breakout",
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 2.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.8,
+      "oos_pf": 2.0
+    }
+  },
+  "XLF": {
+    "ticker": "XLF",
+    "direction": "long_only",
+    "long": {
+      "archetype": "mean_reversion",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 2.0,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.75,
+      "oos_pf": 1.5
+    }
+  },
+  "NVDA": {
+    "ticker": "NVDA",
+    "direction": "excluded"
+  },
+  "TSLA": {
+    "ticker": "TSLA",
+    "direction": "long_only",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 2.0,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.769,
+      "oos_pf": 3.32
+    }
+  },
+  "AMD": {
+    "ticker": "AMD",
+    "direction": "both",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.8,
+      "oos_pf": 2.0
+    },
+    "short": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.69,
+      "oos_pf": 1.38
+    }
+  },
+  "MSFT": {
+    "ticker": "MSFT",
+    "direction": "both",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 2.0,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.786,
+      "oos_pf": 2.75
+    },
+    "short": {
+      "archetype": "trend_pullback",
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02,
+        "risk_budget": 500.0,
+        "premium_atr_ratio": 0.3,
+        "slippage": 0.01
+      },
+      "oos_wr": 0.667,
+      "oos_pf": 1.24
+    }
+  },
+  "META": {
+    "ticker": "META",
+    "direction": "excluded"
+  },
+  "AMZN": {
+    "ticker": "AMZN",
+    "direction": "excluded"
+  },
+  "SOFI": {
+    "ticker": "SOFI",
+    "direction": "excluded"
+  },
+  "INTC": {
+    "ticker": "INTC",
+    "direction": "excluded"
+  }
+}
