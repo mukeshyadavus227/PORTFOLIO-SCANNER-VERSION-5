@@ -617,8 +617,7 @@ if barstate.islast and showDashboard
     table.cell(tbl, 0, 8, "V6 COMP",
          bgcolor=color.navy, text_color=color.white, text_size=size.small)
     table.cell(tbl, 1, 8, str.tostring(v6_composite, "0.#"),
-         text_color=v6_composite >= minScore ? color.green :
-              v6_composite >= watchlistScore ? color.yellow : color.gray, text_size=size.small)
+         text_color=v6_composite >= minScore ? color.green : color.gray, text_size=size.small)
     table.cell(tbl, 2, 8, "", text_size=size.small)
     table.cell(tbl, 3, 8, "max 100",
          text_color=color.gray, text_size=size.tiny)
