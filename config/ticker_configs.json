@@ -4,7 +4,12 @@
     "direction": "long_only",
     "long": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.81,
       "oos_pf": 2.17
     }
@@ -14,7 +19,12 @@
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.87,
       "oos_pf": 3.25
     }
@@ -24,8 +34,13 @@
     "direction": "long_only",
     "long": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 2.0, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.80,
+      "params": {
+        "atr_stop_mult": 2.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.8,
       "oos_pf": 2.0
     }
   },
@@ -34,9 +49,14 @@
     "direction": "long_only",
     "long": {
       "archetype": "mean_reversion",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 2.0,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.75,
-      "oos_pf": 1.50
+      "oos_pf": 1.5
     }
   },
   "TSLA": {
@@ -44,7 +64,12 @@
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 2.0,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.77,
       "oos_pf": 3.32
     }
@@ -54,13 +79,23 @@
     "direction": "both",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.80,
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.8,
       "oos_pf": 2.0
     },
     "short": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.69,
       "oos_pf": 1.38
     }
@@ -70,68 +105,129 @@
     "direction": "both",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 2.0,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.79,
       "oos_pf": 2.75
     },
     "short": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.67,
       "oos_pf": 1.24
     }
   },
   "SPY": {
     "ticker": "SPY",
-    "direction": "short_only",
-    "short": {
+    "direction": "regime_adaptive",
+    "bear_short": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.77,
-      "oos_pf": 1.67
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.875,
+      "oos_pf": 7.02
     },
-    "iron_condor": {"suitable": true, "pct_ranging": 0.41, "autocorr": -0.155}
+    "regime_rules": {
+      "bull": "weekly EMA9 > EMA21",
+      "bear": "weekly EMA9 < EMA21",
+      "range": "ADX < 20 for 10+ bars"
+    },
+    "iron_condor": {
+      "suitable": true
+    }
   },
   "QQQ": {
     "ticker": "QQQ",
-    "direction": "both",
-    "long": {
+    "direction": "regime_adaptive_long_only",
+    "bull_long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.66,
-      "oos_pf": 1.12
+      "params": {
+        "max_hold_bars": 20,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.696,
+      "oos_pf": 1.33
     },
-    "short": {
-      "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.74,
-      "oos_pf": 1.54
+    "bear_short": {
+      "archetype": "momentum_breakout",
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 1.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 1.0,
+      "oos_pf": 99.0
     },
-    "iron_condor": {"suitable": true, "pct_ranging": 0.41, "autocorr": -0.141}
+    "regime_rules": {
+      "bull": "weekly EMA9 > EMA21",
+      "bear": "weekly EMA9 < EMA21",
+      "range": "ADX < 20 for 10+ bars"
+    },
+    "iron_condor": {
+      "suitable": true
+    }
   },
   "IWM": {
     "ticker": "IWM",
-    "direction": "both",
-    "long": {
+    "direction": "regime_adaptive",
+    "bull_long": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.90,
-      "oos_pf": 4.49
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 3.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.857,
+      "oos_pf": 3.0
     },
-    "short": {
+    "bear_short": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.83,
-      "oos_pf": 2.50
+      "params": {
+        "max_hold_bars": 15,
+        "atr_stop_mult": 2.0,
+        "atr_target_mult": 1.5,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.667,
+      "oos_pf": 1.2
     },
-    "iron_condor": {"suitable": true, "pct_ranging": 0.53, "autocorr": -0.079}
+    "regime_rules": {
+      "bull": "weekly EMA9 > EMA21",
+      "bear": "weekly EMA9 < EMA21",
+      "range": "ADX < 20 for 10+ bars"
+    },
+    "iron_condor": {
+      "suitable": true
+    }
   },
   "NVDA": {
     "ticker": "NVDA",
     "direction": "long_only",
     "long": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.73,
       "oos_pf": 1.33
     }
@@ -141,10 +237,15 @@
     "direction": "long_marginal",
     "long": {
       "archetype": "mean_reversion",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 2.0,
+        "max_hold_bars": 20,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.65,
       "oos_pf": 0.93,
-      "note": "marginal — PF below 1.0"
+      "note": "marginal \u2014 PF below 1.0"
     }
   },
   "AMZN": {
@@ -152,20 +253,34 @@
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.78,
-      "oos_pf": 2.10
+      "oos_pf": 2.1
     },
-    "iron_condor": {"suitable": true, "pct_ranging": 0.44, "autocorr": -0.031}
+    "iron_condor": {
+      "suitable": true,
+      "pct_ranging": 0.44,
+      "autocorr": -0.031
+    }
   },
   "SOFI": {
     "ticker": "SOFI",
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
-      "oos_wr": 0.80,
-      "oos_pf": 2.00
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
+      "oos_wr": 0.8,
+      "oos_pf": 2.0
     }
   },
   "INTC": {
@@ -173,10 +288,19 @@
     "direction": "short_only",
     "short": {
       "archetype": "momentum_breakout",
-      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "params": {
+        "atr_stop_mult": 1.5,
+        "atr_target_mult": 1.5,
+        "max_hold_bars": 15,
+        "cooldown_pullback_pct": 0.02
+      },
       "oos_wr": 0.88,
-      "oos_pf": 3.50
+      "oos_pf": 3.5
     },
-    "iron_condor": {"suitable": true, "pct_ranging": 0.47, "autocorr": -0.088}
+    "iron_condor": {
+      "suitable": true,
+      "pct_ranging": 0.47,
+      "autocorr": -0.088
+    }
   }
 }
