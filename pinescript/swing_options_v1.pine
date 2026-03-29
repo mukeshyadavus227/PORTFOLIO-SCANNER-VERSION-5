@@ -103,7 +103,7 @@ keltLower     = keltMid - 1.5 * keltATR
 [bbMid, bbUp, bbLo] = ta.bb(close, 20, 2.0)
 
 // Stochastic
-[stochK, stochD] = ta.stoch(close, high, low, 14)
+stochK        = ta.stoch(close, high, low, 14)
 stochKSmooth  = ta.sma(stochK, 3)
 stochDSmooth  = ta.sma(stochKSmooth, 3)
 
