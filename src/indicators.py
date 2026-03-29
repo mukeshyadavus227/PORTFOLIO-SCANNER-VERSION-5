@@ -406,6 +406,84 @@ def calc_waddah_attar(df: pd.DataFrame, sensitivity: float = 150.0,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# 14. Keltner Channels
+# ═══════════════════════════════════════════════════════════════════════════
+
+def calc_keltner(df: pd.DataFrame, ema_period: int = 20,
+                 atr_period: int = 10,
+                 mult: float = 1.5) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Keltner Channels: EMA ± mult * ATR.
+
+    Returns (upper, middle, lower).
+    """
+    middle = calc_ema(df["Close"], ema_period)
+    atr = calc_atr(df, atr_period)
+    upper = middle + mult * atr
+    lower = middle - mult * atr
+    return upper, middle, lower
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 15. On-Balance Volume (OBV)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def calc_obv(df: pd.DataFrame) -> pd.Series:
+    """On-Balance Volume — cumulative volume in direction of close change."""
+    close = df["Close"]
+    volume = df["Volume"]
+    direction = np.sign(close.diff()).fillna(0)
+    obv = (direction * volume).cumsum()
+    return obv
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 16. Commodity Channel Index (CCI)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def calc_cci(df: pd.DataFrame, period: int = 20) -> pd.Series:
+    """CCI = (TP - SMA(TP)) / (0.015 * mean_deviation(TP))."""
+    tp = (df["High"] + df["Low"] + df["Close"]) / 3.0
+    sma_tp = tp.rolling(period).mean()
+    mean_dev = tp.rolling(period).apply(lambda x: np.abs(x - x.mean()).mean(), raw=True)
+    cci = (tp - sma_tp) / (0.015 * mean_dev)
+    return cci
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 17. Swing High/Low Detection
+# ═══════════════════════════════════════════════════════════════════════════
+
+def calc_swing_levels(df: pd.DataFrame,
+                      lookback: int = 5) -> tuple[pd.Series, pd.Series]:
+    """Detect swing highs and lows, return most recent levels as series.
+
+    A swing high at bar i: High[i] > all highs in [i-lookback, i+lookback].
+    Returns forward-filled series of most recent swing high and swing low prices.
+    """
+    high = df["High"]
+    low = df["Low"]
+    n = len(df)
+    swing_hi = pd.Series(np.nan, index=df.index)
+    swing_lo = pd.Series(np.nan, index=df.index)
+
+    for i in range(lookback, n - lookback):
+        # Swing high: higher than all neighbors
+        window_hi = high.iloc[i - lookback:i + lookback + 1]
+        if high.iloc[i] == window_hi.max() and (high.iloc[i] > high.iloc[i - 1]):
+            swing_hi.iloc[i] = high.iloc[i]
+
+        # Swing low: lower than all neighbors
+        window_lo = low.iloc[i - lookback:i + lookback + 1]
+        if low.iloc[i] == window_lo.min() and (low.iloc[i] < low.iloc[i - 1]):
+            swing_lo.iloc[i] = low.iloc[i]
+
+    # Forward-fill to carry most recent levels
+    swing_hi = swing_hi.ffill()
+    swing_lo = swing_lo.ffill()
+    return swing_hi, swing_lo
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # CLI test harness
 # ═══════════════════════════════════════════════════════════════════════════
 
