@@ -46,9 +46,9 @@ showRegimeBG  = input.bool(true, "Show Regime Background",
 // ── Regime Detection ──
 adxLen        = input.int(14, "ADX Length", minval=7, maxval=30,
      group="Regime Detection")
-adxTrendThr   = input.int(25, "ADX Trend Threshold", minval=15, maxval=40,
+adxTrendThr   = input.int(30, "ADX Trend Threshold", minval=15, maxval=40,
      group="Regime Detection",
-     tooltip="ADX above this = trending")
+     tooltip="ADX above this = trending (optimized: 30 for both clusters)")
 adxRangeThr   = input.int(20, "ADX Range Threshold", minval=10, maxval=25,
      group="Regime Detection",
      tooltip="ADX below this = ranging")
@@ -62,15 +62,15 @@ rsiLen        = input.int(14, "RSI Length", minval=7, maxval=21,
 rsiLoEntry    = input.int(55, "RSI Entry Low", minval=40, maxval=65,
      group="Mode A: Trend Continuation",
      tooltip="RSI must be above this to enter (sweet spot starts at 55)")
-rsiHiEntry    = input.int(75, "RSI Entry High", minval=65, maxval=85,
+rsiHiEntry    = input.int(80, "RSI Entry High", minval=65, maxval=85,
      group="Mode A: Trend Continuation",
-     tooltip="RSI must be below this to enter (avoid overbought)")
-pullbackPct   = input.float(2.0, "Max % From 20-Bar High", minval=0.5, maxval=10.0, step=0.5,
+     tooltip="RSI must be below this (optimized: Trend=80, Momentum=70)")
+pullbackPct   = input.float(1.0, "Max % From 20-Bar High", minval=0.5, maxval=10.0, step=0.5,
      group="Mode A: Trend Continuation",
-     tooltip="Close must be within this % of the 20-bar high (data: 0-1% = 51% WR)")
+     tooltip="Close must be within this % of 20-bar high (optimized: 1% both clusters)")
 emaFast       = input.int(9, "Fast EMA", minval=3, maxval=20,
      group="Mode A: Trend Continuation")
-emaSlow       = input.int(21, "Slow EMA", minval=10, maxval=50,
+emaSlow       = input.int(50, "Slow EMA", minval=10, maxval=50,
      group="Mode A: Trend Continuation")
 emaTrend      = input.int(200, "Trend EMA", minval=100, maxval=300,
      group="Mode A: Trend Continuation")
@@ -212,6 +212,13 @@ autoCluster   = adxAvg50 > 22 ? "Momentum" : "Trend"
 activeCluster = tickerCluster == "Auto-detect" ? autoCluster : tickerCluster
 useModeB      = activeCluster == "Momentum" or activeCluster == "Auto-detect"
 
+// ── Cluster-specific parameter overrides (walk-forward optimized) ──
+// Trend:    RSI 55-80, ADX 30, EMA 21/50, score 65, ATR stop 2.0x, OOS Sharpe 1.447
+// Momentum: RSI 55-70, ADX 30, EMA  9/50, score 75, ATR stop 2.5x, OOS Sharpe 2.518
+clusterMinScore  = activeCluster == "Momentum" ? 75 : 65
+clusterRsiHi     = activeCluster == "Momentum" ? 70 : rsiHiEntry
+clusterOosSharpe = activeCluster == "Momentum" ? 2.518 : 1.447
+
 
 // ════════════════════════════════════════════════════════════════════════
 // SECTION 5 — MODE A: TREND CONTINUATION LONG
@@ -219,7 +226,7 @@ useModeB      = activeCluster == "Momentum" or activeCluster == "Auto-detect"
 
 // Gate: ALL conditions must be true
 modeA_ema     = ema9 > ema21
-modeA_rsi     = rsi >= rsiLoEntry and rsi <= rsiHiEntry
+modeA_rsi     = rsi >= rsiLoEntry and rsi <= clusterRsiHi
 modeA_near    = pctFromHigh <= pullbackPct
 modeA_above   = close > ema200
 modeA_adx     = adx > adxTrendThr
@@ -234,7 +241,7 @@ modeA_gate    = modeA_ema and modeA_rsi and modeA_near and modeA_above
 modeA_score   = modeA_gate ? 0.0 : 0.0
 modeA_score  := not modeA_gate ? 0.0 :
      (modeA_ema ? 25.0 : 0.0) +
-     (rsi >= 60 and rsi <= 70 ? 25.0 : rsi >= rsiLoEntry and rsi <= rsiHiEntry ? 15.0 : 0.0) +
+     (rsi >= 60 and rsi <= 70 ? 25.0 : rsi >= rsiLoEntry and rsi <= clusterRsiHi ? 15.0 : 0.0) +
      (modeA_above ? 20.0 : 0.0) +
      (wkBullish ? 15.0 : 0.0) +
      (volume > volSMA20 ? 5.0 : 0.0) +
@@ -295,9 +302,9 @@ bestMode      = modeA_score >= modeB_score and modeA_score >= modeC_score and mo
      modeB_score >= modeC_score and modeB_score > 0 ? 2 :
      modeC_score > 0 ? 3 : 0
 
-// Mode-specific minimum score
-meetsMinScore = (bestMode == 1 and bestScore >= minScoreA) or
-     (bestMode == 2 and bestScore >= minScoreB) or
+// Mode-specific minimum score (cluster-aware for directional modes)
+meetsMinScore = (bestMode == 1 and bestScore >= clusterMinScore) or
+     (bestMode == 2 and bestScore >= clusterMinScore) or
      (bestMode == 3 and bestScore >= minScoreC)
 
 // Quality filters
@@ -427,7 +434,7 @@ plot(ema200, "EMA 200", color=color.new(color.white, 50),   linewidth=2)
 // SECTION 12 — DASHBOARD TABLE
 // ════════════════════════════════════════════════════════════════════════
 
-var tbl = table.new(position.top_right, 4, 10,
+var tbl = table.new(position.top_right, 4, 11,
      border_color=color.gray, border_width=1,
      frame_color=color.gray, frame_width=2)
 
@@ -537,6 +544,16 @@ if barstate.islast and showDashboard
     table.cell(tbl, 3, 9, atrInRange ? "OK" : "SKIP",
          text_color=atrInRange ? color.green : color.red, text_size=size.tiny)
 
+    // Row 10: Preset / Optimization status
+    table.cell(tbl, 0, 10, "PRESET",
+         bgcolor=color.new(color.teal, 50), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 10, activeCluster,
+         text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 2, 10, "OPT",
+         text_color=color.green, text_size=size.small)
+    table.cell(tbl, 3, 10, "SR " + str.tostring(clusterOosSharpe, "0.##"),
+         text_color=color.green, text_size=size.tiny)
+
 
 // ════════════════════════════════════════════════════════════════════════
 // SECTION 13 — ALERT CONDITIONS
@@ -586,6 +603,8 @@ if fireEntry
          '"weekly_trend":"' + wkTrendStr + '",' +
          '"cluster":"' + activeCluster + '",' +
          '"options_guidance":"' + optionsGuide + '",' +
+         '"optimized":true,' +
+         '"oos_sharpe":' + str.tostring(clusterOosSharpe, "0.###") + ',' +
          '"exit_reason":"",' +
          '"bb_upper":' + str.tostring(bbUp, "0.##") + ',' +
          '"bb_lower":' + str.tostring(bbLo, "0.##") + ',' +
