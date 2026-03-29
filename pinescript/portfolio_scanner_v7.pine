@@ -459,12 +459,9 @@ var int lastSignalBar = 0
 cooldownOk    = bar_index - lastSignalBar >= cooldownBars
 
 // Tier classification
-isPromoted    = v4_hasSignal and v6_composite >= minScore and dirOk and shortScoreOk
-                and atrInRange and cooldownOk and barstate.isconfirmed
-isWatchlist   = v4_hasSignal and v6_composite >= watchlistScore and v6_composite < minScore
-                and dirOk and shortScoreOk and atrInRange and barstate.isconfirmed
-isSuppressed  = v4_hasSignal and (v6_composite < watchlistScore or not dirOk or not shortScoreOk)
-                and barstate.isconfirmed
+isPromoted    = v4_hasSignal and v6_composite >= minScore and dirOk and shortScoreOk and atrInRange and cooldownOk and barstate.isconfirmed
+isWatchlist   = v4_hasSignal and v6_composite >= watchlistScore and v6_composite < minScore and dirOk and shortScoreOk and atrInRange and barstate.isconfirmed
+isSuppressed  = v4_hasSignal and (v6_composite < watchlistScore or not dirOk or not shortScoreOk) and barstate.isconfirmed
 
 // Signal type labels
 signalTier    = isPromoted ? "PROMOTED" : isWatchlist ? "WATCHLIST" : isSuppressed ? "SUPPRESSED" : "NONE"
