@@ -1,31 +1,11 @@
 {
-  "SPY": {
-    "ticker": "SPY",
-    "direction": "excluded"
-  },
-  "QQQ": {
-    "ticker": "QQQ",
-    "direction": "excluded"
-  },
-  "IWM": {
-    "ticker": "IWM",
-    "direction": "excluded"
-  },
   "SLV": {
     "ticker": "SLV",
     "direction": "long_only",
     "long": {
       "archetype": "momentum_breakout",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.812,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.81,
       "oos_pf": 2.17
     }
   },
@@ -34,16 +14,8 @@
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.867,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.87,
       "oos_pf": 3.25
     }
   },
@@ -52,16 +24,8 @@
     "direction": "long_only",
     "long": {
       "archetype": "momentum_breakout",
-      "params": {
-        "max_hold_bars": 15,
-        "atr_stop_mult": 2.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.8,
+      "params": {"atr_stop_mult": 2.0, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.80,
       "oos_pf": 2.0
     }
   },
@@ -70,38 +34,18 @@
     "direction": "long_only",
     "long": {
       "archetype": "mean_reversion",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 1.5,
-        "atr_target_mult": 2.0,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
       "oos_wr": 0.75,
-      "oos_pf": 1.5
+      "oos_pf": 1.50
     }
-  },
-  "NVDA": {
-    "ticker": "NVDA",
-    "direction": "excluded"
   },
   "TSLA": {
     "ticker": "TSLA",
     "direction": "long_only",
     "long": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 2.0,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.769,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.77,
       "oos_pf": 3.32
     }
   },
@@ -110,29 +54,13 @@
     "direction": "both",
     "long": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 15,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.8,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.80,
       "oos_pf": 2.0
     },
     "short": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
       "oos_wr": 0.69,
       "oos_pf": 1.38
     }
@@ -142,47 +70,113 @@
     "direction": "both",
     "long": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 2.0,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.786,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.79,
       "oos_pf": 2.75
     },
     "short": {
       "archetype": "trend_pullback",
-      "params": {
-        "max_hold_bars": 20,
-        "atr_stop_mult": 3.0,
-        "atr_target_mult": 1.5,
-        "cooldown_pullback_pct": 0.02,
-        "risk_budget": 500.0,
-        "premium_atr_ratio": 0.3,
-        "slippage": 0.01
-      },
-      "oos_wr": 0.667,
+      "params": {"atr_stop_mult": 3.0, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.67,
       "oos_pf": 1.24
+    }
+  },
+  "SPY": {
+    "ticker": "SPY",
+    "direction": "short_only",
+    "short": {
+      "archetype": "momentum_breakout",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.77,
+      "oos_pf": 1.67
+    },
+    "iron_condor": {"suitable": true, "pct_ranging": 0.41, "autocorr": -0.155}
+  },
+  "QQQ": {
+    "ticker": "QQQ",
+    "direction": "both",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.66,
+      "oos_pf": 1.12
+    },
+    "short": {
+      "archetype": "trend_pullback",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.74,
+      "oos_pf": 1.54
+    },
+    "iron_condor": {"suitable": true, "pct_ranging": 0.41, "autocorr": -0.141}
+  },
+  "IWM": {
+    "ticker": "IWM",
+    "direction": "both",
+    "long": {
+      "archetype": "momentum_breakout",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.90,
+      "oos_pf": 4.49
+    },
+    "short": {
+      "archetype": "momentum_breakout",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.83,
+      "oos_pf": 2.50
+    },
+    "iron_condor": {"suitable": true, "pct_ranging": 0.53, "autocorr": -0.079}
+  },
+  "NVDA": {
+    "ticker": "NVDA",
+    "direction": "long_only",
+    "long": {
+      "archetype": "momentum_breakout",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.73,
+      "oos_pf": 1.33
     }
   },
   "META": {
     "ticker": "META",
-    "direction": "excluded"
+    "direction": "long_marginal",
+    "long": {
+      "archetype": "mean_reversion",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 2.0, "max_hold_bars": 20, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.65,
+      "oos_pf": 0.93,
+      "note": "marginal — PF below 1.0"
+    }
   },
   "AMZN": {
     "ticker": "AMZN",
-    "direction": "excluded"
+    "direction": "long_only",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.78,
+      "oos_pf": 2.10
+    },
+    "iron_condor": {"suitable": true, "pct_ranging": 0.44, "autocorr": -0.031}
   },
   "SOFI": {
     "ticker": "SOFI",
-    "direction": "excluded"
+    "direction": "long_only",
+    "long": {
+      "archetype": "trend_pullback",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.80,
+      "oos_pf": 2.00
+    }
   },
   "INTC": {
     "ticker": "INTC",
-    "direction": "excluded"
+    "direction": "short_only",
+    "short": {
+      "archetype": "momentum_breakout",
+      "params": {"atr_stop_mult": 1.5, "atr_target_mult": 1.5, "max_hold_bars": 15, "cooldown_pullback_pct": 0.02},
+      "oos_wr": 0.88,
+      "oos_pf": 3.50
+    },
+    "iron_condor": {"suitable": true, "pct_ranging": 0.47, "autocorr": -0.088}
   }
 }
