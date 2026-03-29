@@ -357,10 +357,24 @@ alertcondition(fireSignal and bestAction == "SHORT", title="Short Entry", messag
 alertcondition(fireSignal and bestAction == "IRON_CONDOR", title="Iron Condor", message="SWING_OPT IC on {{ticker}}")
 alertcondition(exitSignal, title="Exit", message="SWING_OPT EXIT on {{ticker}}")
 
+// Tier classification (from Model C backtest)
+f_tier() =>
+    t = syminfo.ticker
+    t == "SLV" or t == "MSFT" or t == "TSLA" or t == "XLE" ? 1 : t == "AMD" or t == "SOFI" or t == "GLD" ? 2 : 3
+
+f_modelCwr() =>
+    t = syminfo.ticker
+    t == "SLV" ? 55.0 : t == "XLE" ? 52.0 : t == "MSFT" ? 50.0 : t == "TSLA" ? 49.0 : t == "AMD" ? 45.0 : t == "SOFI" ? 40.0 : t == "GLD" ? 38.0 : t == "IWM" ? 38.0 : t == "AMZN" ? 38.0 : t == "XLF" ? 36.0 : t == "INTC" ? 36.0 : t == "NVDA" ? 33.0 : t == "META" ? 31.0 : t == "QQQ" ? 28.0 : t == "SPY" ? 25.0 : 30.0
+
+tickerTier = f_tier()
+modelCwr   = f_modelCwr()
+tierStr    = tickerTier == 1 ? "TIER1" : tickerTier == 2 ? "TIER2" : "TIER3"
+spreadWidth = close > 100 ? "5.00" : "2.50"
+
 if fireSignal and bestAction != "NONE"
     safeTicker = str.replace_all(syminfo.ticker, '"', '\\"')
     safeToken  = str.replace_all(webhookToken, '"', '\\"')
-    payload = '{' + '"token":"' + safeToken + '",' + '"ticker":"' + safeTicker + '",' + '"action":"' + bestAction + '",' + '"archetype":"' + archName + '",' + '"conviction":' + str.tostring(bestScore, "0.#") + ',' + '"direction_mode":"' + dirName + '",' + '"regime_state":"' + regimeState + '",' + '"entry_price":' + str.tostring(close, "0.##") + ',' + '"stop_loss":' + str.tostring(nz(stopLevel, 0), "0.##") + ',' + '"target":' + str.tostring(nz(targetLevel, 0), "0.##") + ',' + '"daily_atr":' + str.tostring(nz(dlyAtr), "0.##") + ',' + '"daily_rsi":' + str.tostring(nz(dlyRsi), "0.#") + ',' + '"daily_adx":' + str.tostring(nz(dlyAdx), "0.#") + ',' + '"intraday_rsi":' + str.tostring(iflyRsi, "0.#") + ',' + '"suggested_dte":50,' + '"max_hold_bars":' + str.tostring(maxHoldBars) + ',' + '"timeframe":"' + timeframe.period + '",' + '"timestamp":"' + str.tostring(timenow) + '"}'
+    payload = '{' + '"token":"' + safeToken + '",' + '"ticker":"' + safeTicker + '",' + '"action":"' + bestAction + '",' + '"archetype":"' + archName + '",' + '"conviction":' + str.tostring(bestScore, "0.#") + ',' + '"direction_mode":"' + dirName + '",' + '"regime_state":"' + regimeState + '",' + '"entry_price":' + str.tostring(close, "0.##") + ',' + '"stop_loss":' + str.tostring(nz(stopLevel, 0), "0.##") + ',' + '"target":' + str.tostring(nz(targetLevel, 0), "0.##") + ',' + '"daily_atr":' + str.tostring(nz(dlyAtr), "0.##") + ',' + '"daily_rsi":' + str.tostring(nz(dlyRsi), "0.#") + ',' + '"daily_adx":' + str.tostring(nz(dlyAdx), "0.#") + ',' + '"intraday_rsi":' + str.tostring(iflyRsi, "0.#") + ',' + '"suggested_dte":50,' + '"max_hold_bars":' + str.tostring(maxHoldBars) + ',' + '"options_structure":"vertical_debit_spread",' + '"take_profit_pct":50,' + '"stop_loss_pct":50,' + '"max_hold_days":15,' + '"spread_width":"' + spreadWidth + '",' + '"tier":"' + tierStr + '",' + '"model_c_expected_wr":' + str.tostring(modelCwr, "0.#") + ',' + '"management_rules":"TP at 50pct max profit, SL at 50pct max loss, close by day 15",' + '"timeframe":"' + timeframe.period + '",' + '"timestamp":"' + str.tostring(timenow) + '"}'
     alert(payload, alert.freq_once_per_bar_close)
 
 if exitSignal

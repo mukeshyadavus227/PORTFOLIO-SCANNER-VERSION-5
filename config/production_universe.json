@@ -1,0 +1,52 @@
+{
+  "model": "C_Managed_Spreads",
+  "model_rules": {
+    "structure": "vertical_debit_spread",
+    "take_profit": "50% of max profit",
+    "stop_loss": "50% of max loss",
+    "max_hold_days": 15,
+    "close_flat_by_day": 15,
+    "breakeven_wr": 43
+  },
+  "tiers": {
+    "TIER1": {
+      "description": "Profitable in Model C backtest. Full position size.",
+      "max_risk_per_trade": "3% of account",
+      "tickers": {
+        "SLV": {"archetype": "momentum_breakout", "direction": "long_only", "wr": 55, "pf": 1.31, "pnl": 1875, "spread_width": "$2.50"},
+        "MSFT": {"archetype": "trend_pullback", "direction": "both", "wr": 50, "pf": 1.12, "pnl": 996, "spread_width": "$5.00"},
+        "TSLA": {"archetype": "trend_pullback", "direction": "long_only", "wr": 49, "pf": 1.06, "pnl": 501, "spread_width": "$5.00"},
+        "XLE": {"archetype": "momentum_breakout", "direction": "long_only", "wr": 52, "pf": 1.10, "pnl": 375, "spread_width": "$2.50"}
+      }
+    },
+    "TIER2": {
+      "description": "Near breakeven in Model C. Half position size.",
+      "max_risk_per_trade": "1.5% of account",
+      "tickers": {
+        "AMD": {"archetype": "trend_pullback", "direction": "both", "wr": 45, "pf": 0.86, "pnl": -1372, "spread_width": "$5.00"},
+        "SOFI": {"archetype": "trend_pullback", "direction": "long_only", "wr": 40, "pf": 0.70, "pnl": -1750, "spread_width": "$2.50"},
+        "GLD": {"archetype": "trend_pullback", "direction": "long_only", "wr": 38, "pf": 0.65, "pnl": -3623, "spread_width": "$5.00"}
+      }
+    },
+    "TIER3": {
+      "description": "Monitor only. Paper trade to validate before live.",
+      "max_risk_per_trade": "0% (paper only)",
+      "tickers": {
+        "SPY": {"archetype": "momentum_breakout", "direction": "regime_adaptive", "wr": 25, "pf": 0.33, "note": "iron_condor candidate"},
+        "QQQ": {"archetype": "trend_pullback", "direction": "regime_adaptive", "wr": 28, "pf": 0.40, "note": "iron_condor candidate"},
+        "IWM": {"archetype": "momentum_breakout", "direction": "regime_adaptive", "wr": 38, "pf": 0.63, "note": "iron_condor candidate"},
+        "XLF": {"archetype": "mean_reversion", "direction": "long_only", "wr": 36, "pf": 0.57},
+        "NVDA": {"archetype": "momentum_breakout", "direction": "long_only", "wr": 33, "pf": 0.54},
+        "META": {"archetype": "mean_reversion", "direction": "long_marginal", "wr": 31, "pf": 0.46},
+        "AMZN": {"archetype": "trend_pullback", "direction": "long_only", "wr": 38, "pf": 0.64},
+        "INTC": {"archetype": "momentum_breakout", "direction": "short_only", "wr": 36, "pf": 0.63}
+      }
+    }
+  },
+  "iron_condor_universe": ["SPY", "QQQ", "IWM", "AMZN", "INTC"],
+  "position_limits": {
+    "max_simultaneous_positions": 7,
+    "max_account_risk_pct": 20,
+    "tier1_priority": true
+  }
+}
