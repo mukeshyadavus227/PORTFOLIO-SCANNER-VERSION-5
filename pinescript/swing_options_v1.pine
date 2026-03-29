@@ -1,0 +1,390 @@
+// ════════════════════════════════════════════════════════════════════════
+// Swing Options V1 — 15-Ticker Production Signal Generator
+// ════════════════════════════════════════════════════════════════════════
+// Built from fresh backtesting: 25 indicators × 15 tickers × walk-forward
+// validation. Each ticker has its own archetype, direction, and parameters.
+//
+// 3 Archetypes: Trend Pullback, Momentum Breakout, Mean Reversion
+// 3 Directions: Long Only, Short Only, Both, Regime Adaptive
+// Iron condor signals for SPY, QQQ, IWM, AMZN, INTC
+//
+// Regime-adaptive (SPY, QQQ, IWM): weekly EMA9 vs EMA21 determines direction
+//   Bull → longs only, Bear → shorts only, Range → iron condors
+// ════════════════════════════════════════════════════════════════════════
+
+//@version=6
+indicator("Swing Options V1 [Webhook]", overlay=true, max_labels_count=50)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// INPUTS
+// ════════════════════════════════════════════════════════════════════════
+
+minScore      = input.int(70, "Min Conviction Score", minval=40, maxval=95, step=5, group="Master Controls")
+cooldownBars  = input.int(5, "Cooldown Bars", minval=1, maxval=20, group="Master Controls")
+showDashboard = input.bool(true, "Show Dashboard", group="Master Controls")
+showRegimeBG  = input.bool(true, "Show Regime Background", group="Master Controls")
+webhookToken  = input.string("mukesh-tv-2026", "Webhook Token", group="Master Controls")
+
+dirOverride   = input.string("Auto", "Direction Override", options=["Auto", "Long Only", "Short Only", "Both"], group="Override")
+archOverride  = input.string("Auto", "Archetype Override", options=["Auto", "Trend Pullback", "Momentum Breakout", "Mean Reversion"], group="Override")
+
+rsiExitHi     = input.int(80, "RSI Take Profit", minval=70, maxval=90, group="Exit Rules")
+timeWarnBar   = input.int(15, "Time Warning Bar", minval=10, maxval=25, group="Exit Rules")
+
+
+// ════════════════════════════════════════════════════════════════════════
+// PER-TICKER CONFIG LOOKUP
+// ════════════════════════════════════════════════════════════════════════
+// archId: 1=trend_pullback 2=momentum_breakout 3=mean_reversion
+// dirId:  1=long_only 2=short_only 3=both 4=regime_adaptive
+// [archId, dirId, atrStop, atrTarget, maxHold, hasIronCondor]
+
+f_arch() =>
+    t = syminfo.ticker
+    t == "GLD" ? 1 : t == "TSLA" ? 1 : t == "AMD" ? 1 : t == "MSFT" ? 1 : t == "AMZN" ? 1 : t == "SOFI" ? 1 : t == "QQQ" ? 1 : t == "SLV" ? 2 : t == "XLE" ? 2 : t == "SPY" ? 2 : t == "IWM" ? 2 : t == "NVDA" ? 2 : t == "INTC" ? 2 : t == "XLF" ? 3 : t == "META" ? 3 : 1
+
+f_dir() =>
+    t = syminfo.ticker
+    t == "SPY" ? 4 : t == "IWM" ? 4 : t == "QQQ" ? 4 : t == "AMD" ? 3 : t == "MSFT" ? 3 : t == "INTC" ? 2 : t == "META" ? 1 : 1
+
+f_atrStop() =>
+    t = syminfo.ticker
+    t == "GLD" ? 3.0 : t == "SLV" ? 3.0 : t == "TSLA" ? 3.0 : t == "AMD" ? 3.0 : t == "MSFT" ? 3.0 : t == "SPY" ? 3.0 : t == "QQQ" ? 3.0 : t == "IWM" ? 3.0 : t == "XLE" ? 2.0 : 1.5
+
+f_atrTarget() =>
+    t = syminfo.ticker
+    t == "TSLA" ? 2.0 : t == "MSFT" ? 2.0 : t == "XLF" ? 2.0 : t == "META" ? 2.0 : 1.5
+
+f_maxHold() =>
+    t = syminfo.ticker
+    t == "GLD" ? 20 : t == "SLV" ? 20 : t == "TSLA" ? 20 : t == "MSFT" ? 20 : t == "XLF" ? 20 : t == "META" ? 20 : t == "AMD" ? 15 : t == "QQQ" ? 15 : 15
+
+f_hasIC() =>
+    t = syminfo.ticker
+    t == "SPY" or t == "QQQ" or t == "IWM" or t == "AMZN" or t == "INTC"
+
+// Apply overrides or auto-detect
+rawArchId     = archOverride == "Trend Pullback" ? 1 : archOverride == "Momentum Breakout" ? 2 : archOverride == "Mean Reversion" ? 3 : f_arch()
+rawDirId      = dirOverride == "Long Only" ? 1 : dirOverride == "Short Only" ? 2 : dirOverride == "Both" ? 3 : f_dir()
+atrStopMult   = f_atrStop()
+atrTargetMult = f_atrTarget()
+maxHoldBars   = f_maxHold()
+hasIronCondor = f_hasIC()
+isRegimeAdaptive = rawDirId == 4
+isMeta        = syminfo.ticker == "META"
+
+archName      = rawArchId == 1 ? "trend_pullback" : rawArchId == 2 ? "momentum_breakout" : "mean_reversion"
+dirName       = rawDirId == 1 ? "long_only" : rawDirId == 2 ? "short_only" : rawDirId == 3 ? "both" : "regime_adaptive"
+
+
+// ════════════════════════════════════════════════════════════════════════
+// CORE INDICATORS
+// ════════════════════════════════════════════════════════════════════════
+
+ema9          = ta.ema(close, 9)
+ema21         = ta.ema(close, 21)
+rsi14         = ta.rsi(close, 14)
+[diPlus, diMinus, adxVal] = ta.dmi(14, 14)
+atr           = ta.atr(14)
+atrPct        = close > 0 ? atr / close * 100.0 : 0.0
+[macdL, macdS, macdH] = ta.macd(close, 12, 26, 9)
+volSMA20      = ta.sma(volume, 20)
+donchHi       = ta.highest(high, 20)
+donchLo       = ta.lowest(low, 20)
+
+// Keltner Channels
+keltMid       = ta.ema(close, 20)
+keltATR       = ta.atr(10)
+keltUpper     = keltMid + 1.5 * keltATR
+keltLower     = keltMid - 1.5 * keltATR
+
+// Bollinger Bands
+[bbMid, bbUp, bbLo] = ta.bb(close, 20, 2.0)
+
+// Stochastic
+[stochK, stochD] = ta.stoch(close, high, low, 14)
+stochKSmooth  = ta.sma(stochK, 3)
+stochDSmooth  = ta.sma(stochKSmooth, 3)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// WEEKLY MULTI-TIMEFRAME (regime-adaptive tickers)
+// ════════════════════════════════════════════════════════════════════════
+
+f_wkAdx(int len) =>
+    [_p, _m, a] = ta.dmi(len, len)
+    a
+
+wkEma9        = request.security(syminfo.tickerid, "W", ta.ema(close, 9), barmerge.gaps_off, barmerge.lookahead_off)
+wkEma21       = request.security(syminfo.tickerid, "W", ta.ema(close, 21), barmerge.gaps_off, barmerge.lookahead_off)
+wkADX         = request.security(syminfo.tickerid, "W", f_wkAdx(14), barmerge.gaps_off, barmerge.lookahead_off)
+
+wkBullish     = nz(wkEma9) > nz(wkEma21)
+wkBearish     = nz(wkEma9) < nz(wkEma21)
+
+// ADX quiet count for iron condor / ranging detection
+var int adxQuietCount = 0
+adxQuietCount := adxVal < 20 ? adxQuietCount + 1 : 0
+isRanging     = adxQuietCount >= 10
+
+// Regime state for adaptive tickers
+regimeState   = isRegimeAdaptive ? (isRanging ? "range" : wkBullish ? "bull" : "bear") : "n/a"
+
+// Direction gating based on regime
+longAllowed   = rawDirId == 1 or rawDirId == 3 or (rawDirId == 4 and wkBullish and not isRanging)
+shortAllowed  = rawDirId == 2 or rawDirId == 3 or (rawDirId == 4 and wkBearish and not isRanging)
+
+// Regime background
+regBG         = isRegimeAdaptive ? (isRanging ? color.new(color.blue, 93) : wkBullish ? color.new(color.green, 93) : color.new(color.red, 93)) : na
+bgcolor(showRegimeBG and isRegimeAdaptive ? regBG : na, title="Regime BG")
+
+
+// ════════════════════════════════════════════════════════════════════════
+// ARCHETYPE SIGNAL GENERATORS
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Trend Pullback: EMA21 bounce + confirmations ──
+tp_touched    = low[1] <= ema21[1] or low[2] <= ema21[2] or low[3] <= ema21[3] or low[4] <= ema21[4]
+tp_longSig    = tp_touched and close > ema21 and ema9 > ema21 and rsi14 > 50 and macdH > 0
+tp_touchedHi  = high[1] >= ema21[1] or high[2] >= ema21[2] or high[3] >= ema21[3] or high[4] >= ema21[4]
+tp_shortSig   = tp_touchedHi and close < ema21 and ema9 < ema21 and rsi14 < 50 and macdH < 0
+
+// ── Momentum Breakout: Donchian/Keltner break + volume spike ──
+volSpike      = volume > volSMA20 * 1.5
+mb_longSig    = (close > donchHi[1] or close > keltUpper[1]) and volSpike
+mb_shortSig   = (close < donchLo[1] or close < keltLower[1]) and volSpike
+
+// ── Mean Reversion: BB touch bounce + MACD flip ──
+bbBounce      = low[1] <= bbLo[1] and close > bbLo
+macdFlip      = macdH > 0 and macdH[1] <= 0
+mr_longSig    = (bbBounce or macdFlip) and (stochKSmooth < 50 or close < bbMid)
+bbReject      = high[1] >= bbUp[1] and close < bbUp
+macdFlipDn    = macdH < 0 and macdH[1] >= 0
+mr_shortSig   = (bbReject or macdFlipDn) and (stochKSmooth > 50 or close > bbMid)
+
+// ── Iron Condor: ADX quiet for 10+ bars ──
+ironCondorSig = hasIronCondor and isRanging and not tp_longSig and not tp_shortSig and not mb_longSig and not mb_shortSig
+
+
+// ════════════════════════════════════════════════════════════════════════
+// ARCHETYPE ROUTING + DIRECTION GATING
+// ════════════════════════════════════════════════════════════════════════
+
+// Route to correct archetype
+rawLong       = rawArchId == 1 ? tp_longSig : rawArchId == 2 ? mb_longSig : mr_longSig
+rawShort      = rawArchId == 1 ? tp_shortSig : rawArchId == 2 ? mb_shortSig : mr_shortSig
+
+// Apply direction gate (regime-adaptive auto-suppresses wrong direction)
+finalLong     = rawLong and longAllowed and barstate.isconfirmed
+finalShort    = rawShort and shortAllowed and barstate.isconfirmed
+finalIC       = ironCondorSig and barstate.isconfirmed
+
+// Composite conviction score (evidence-weighted)
+longScore     = finalLong ? (ema9 > ema21 ? 25.0 : 0.0) + (rsi14 > 50 ? 25.0 : 0.0) + (close > ta.ema(close, 200) ? 20.0 : 0.0) + (wkBullish ? 15.0 : 0.0) + (volume > volSMA20 ? 5.0 : 0.0) + (macdH > 0 ? 5.0 : 0.0) + (adxVal > 25 ? 5.0 : 0.0) : 0.0
+shortScore    = finalShort ? (ema9 < ema21 ? 25.0 : 0.0) + (rsi14 < 50 ? 25.0 : 0.0) + (close < ta.ema(close, 200) ? 20.0 : 0.0) + (wkBearish ? 15.0 : 0.0) + (volume > volSMA20 ? 5.0 : 0.0) + (macdH < 0 ? 5.0 : 0.0) + (adxVal > 25 ? 5.0 : 0.0) : 0.0
+icScore       = finalIC ? (isRanging ? 30.0 : 0.0) + (adxVal < 15 ? 20.0 : 0.0) + (math.abs(rsi14 - 50) < 10 ? 15.0 : 0.0) + (nz(wkADX) < 25 ? 10.0 : 0.0) : 0.0
+
+bestScore     = math.max(longScore, math.max(shortScore, icScore))
+bestAction    = longScore >= shortScore and longScore >= icScore and longScore > 0 ? "LONG" : shortScore >= icScore and shortScore > 0 ? "SHORT" : icScore > 0 ? "IRON_CONDOR" : "NONE"
+hasSignal     = bestScore > 0 and bestAction != "NONE"
+
+
+// ════════════════════════════════════════════════════════════════════════
+// SWING-AWARE COOLDOWN + QUALITY FILTERS
+// ════════════════════════════════════════════════════════════════════════
+
+var int lastSignalBar = 0
+var float lastSignalClose = 0.0
+var bool swingCooldown = false
+
+barCooldownOk = bar_index - lastSignalBar >= cooldownBars
+pullbackOk    = not swingCooldown or (lastSignalClose > 0 and math.abs(close - lastSignalClose) / lastSignalClose > 0.02)
+cooldownOk    = barCooldownOk and pullbackOk
+scoreOk       = bestScore >= minScore
+atrOk         = atrPct >= 0.8 and atrPct <= 6.0
+
+fireSignal    = hasSignal and scoreOk and cooldownOk and atrOk
+
+
+// ════════════════════════════════════════════════════════════════════════
+// EXIT SIGNALS
+// ════════════════════════════════════════════════════════════════════════
+
+var int entryBar     = 0
+var bool inPosition  = false
+var float entryRSI   = 0.0
+var string posDir    = ""
+
+// Fast EMA stop: close beyond EMA9 for 2 consecutive bars
+var int belowCount   = 0
+exitEmaCheck         = posDir == "LONG" ? close < ema9 : posDir == "SHORT" ? close > ema9 : false
+belowCount          := exitEmaCheck ? belowCount + 1 : 0
+exitStop             = inPosition and belowCount >= 2
+
+// Momentum reversal
+exitMomentum         = inPosition and posDir == "LONG" and entryRSI > 60 and rsi14 < 40
+exitMomentumShort    = inPosition and posDir == "SHORT" and entryRSI < 40 and rsi14 > 60
+
+// Take profit
+exitTP               = inPosition and ((posDir == "LONG" and rsi14 > rsiExitHi) or (posDir == "SHORT" and rsi14 < (100 - rsiExitHi)))
+
+// Time stop
+barsInTrade          = inPosition ? bar_index - entryBar : 0
+exitTime             = inPosition and barsInTrade >= maxHoldBars
+timeWarning          = inPosition and barsInTrade >= timeWarnBar and barsInTrade < maxHoldBars
+
+exitSignal           = exitStop or exitMomentum or exitMomentumShort or exitTP or exitTime
+exitReason           = exitStop ? "stop_loss" : exitMomentum or exitMomentumShort ? "momentum_reversal" : exitTP ? "take_profit" : exitTime ? "time_stop" : ""
+
+
+// ════════════════════════════════════════════════════════════════════════
+// POSITION TRACKING
+// ════════════════════════════════════════════════════════════════════════
+
+// Stop and target levels
+stopLevel     = fireSignal and bestAction == "LONG" ? close - atrStopMult * atr : fireSignal and bestAction == "SHORT" ? close + atrStopMult * atr : na
+targetLevel   = fireSignal and bestAction == "LONG" ? close + atrTargetMult * atr : fireSignal and bestAction == "SHORT" ? close - atrTargetMult * atr : na
+
+if fireSignal and (bestAction == "LONG" or bestAction == "SHORT")
+    lastSignalBar   := bar_index
+    lastSignalClose := close
+    swingCooldown   := true
+    entryBar        := bar_index
+    entryRSI        := rsi14
+    inPosition      := true
+    belowCount      := 0
+    posDir          := bestAction
+
+if fireSignal and bestAction == "IRON_CONDOR"
+    lastSignalBar   := bar_index
+    lastSignalClose := close
+
+if exitSignal
+    inPosition      := false
+    swingCooldown   := false
+    entryBar        := 0
+    belowCount      := 0
+    posDir          := ""
+
+
+// ════════════════════════════════════════════════════════════════════════
+// INDICATOR PLOTS
+// ════════════════════════════════════════════════════════════════════════
+
+plot(ema9,  "EMA 9",  color=color.new(color.blue, 40), linewidth=1)
+plot(ema21, "EMA 21", color=color.new(color.orange, 40), linewidth=1)
+plot(donchHi, "Donchian Hi", color=color.new(color.green, 75), linewidth=1)
+plot(donchLo, "Donchian Lo", color=color.new(color.red, 75), linewidth=1)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// VISUAL MARKERS
+// ════════════════════════════════════════════════════════════════════════
+
+plotshape(fireSignal and bestAction == "LONG", "Long Entry", shape.triangleup, location.belowbar, color=color.green, size=size.normal)
+plotshape(fireSignal and bestAction == "SHORT", "Short Entry", shape.triangledown, location.abovebar, color=color.red, size=size.normal)
+plotshape(fireSignal and bestAction == "IRON_CONDOR", "Iron Condor", shape.diamond, location.abovebar, color=color.blue, size=size.small)
+plotshape(timeWarning, "Time Warning", shape.triangleup, location.belowbar, color=color.yellow, size=size.tiny)
+plotshape(exitSignal, "Exit", shape.xcross, location.abovebar, color=color.red, size=size.small)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// DASHBOARD TABLE
+// ════════════════════════════════════════════════════════════════════════
+
+var tbl = table.new(position.top_right, 4, 10, border_color=color.gray, border_width=1, frame_color=color.gray, frame_width=2)
+daysSince = bar_index - lastSignalBar
+
+if barstate.islast and showDashboard
+    // Row 0: Header
+    table.cell(tbl, 0, 0, syminfo.ticker, bgcolor=color.black, text_color=color.white, text_size=size.normal)
+    table.cell(tbl, 1, 0, "SwingOpt V1", bgcolor=color.navy, text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 2, 0, archName, bgcolor=color.navy, text_color=color.yellow, text_size=size.tiny)
+    table.cell(tbl, 3, 0, dirName, bgcolor=color.navy, text_color=color.yellow, text_size=size.tiny)
+
+    // Row 1: Regime state (adaptive tickers)
+    table.cell(tbl, 0, 1, "REGIME", bgcolor=color.maroon, text_color=color.white, text_size=size.small)
+    regClr = regimeState == "bull" ? color.green : regimeState == "bear" ? color.red : regimeState == "range" ? color.blue : color.gray
+    table.cell(tbl, 1, 1, regimeState, text_color=regClr, text_size=size.small)
+    table.cell(tbl, 2, 1, "ADX=" + str.tostring(adxVal, "#"), text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 1, isRegimeAdaptive ? "ADAPTIVE" : "FIXED", text_color=isRegimeAdaptive ? color.yellow : color.gray, text_size=size.tiny)
+
+    // Row 2: Signal status
+    sigClr = fireSignal ? color.green : hasSignal ? color.yellow : color.gray
+    table.cell(tbl, 0, 2, "SIGNAL", bgcolor=color.new(color.teal, 40), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 2, fireSignal ? bestAction : hasSignal ? "BLOCKED" : "—", text_color=sigClr, text_size=size.small)
+    table.cell(tbl, 2, 2, str.tostring(bestScore, "#"), text_color=bestScore >= minScore ? color.green : color.gray, text_size=size.small)
+    table.cell(tbl, 3, 2, cooldownOk ? "CD OK" : "CD " + str.tostring(cooldownBars - (bar_index - lastSignalBar)), text_color=cooldownOk ? color.green : color.red, text_size=size.tiny)
+
+    // Row 3: RSI / MACD
+    table.cell(tbl, 0, 3, "RSI/MACD", bgcolor=color.new(color.purple, 50), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 3, "RSI=" + str.tostring(rsi14, "0.#"), text_color=rsi14 > 70 ? color.red : rsi14 < 30 ? color.green : color.white, text_size=size.small)
+    table.cell(tbl, 2, 3, "MACD " + (macdH > 0 ? "+" : "-"), text_color=macdH > 0 ? color.green : color.red, text_size=size.small)
+    table.cell(tbl, 3, 3, "ATR=" + str.tostring(atrPct, "0.#") + "%", text_color=atrOk ? color.green : color.red, text_size=size.tiny)
+
+    // Row 4: EMA status
+    emaOk = ema9 > ema21
+    table.cell(tbl, 0, 4, "EMA", bgcolor=color.new(color.purple, 50), text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 4, emaOk ? "9>21 BULL" : "9<21 BEAR", text_color=emaOk ? color.green : color.red, text_size=size.small)
+    table.cell(tbl, 2, 4, "Wk " + (wkBullish ? "BULL" : "BEAR"), text_color=wkBullish ? color.green : color.red, text_size=size.small)
+    table.cell(tbl, 3, 4, "L:" + (longAllowed ? "Y" : "N") + " S:" + (shortAllowed ? "Y" : "N"), text_color=color.white, text_size=size.tiny)
+
+    // Row 5: Position / time exit
+    table.cell(tbl, 0, 5, "TRADE", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 5, inPosition ? posDir + " " + str.tostring(barsInTrade) + "b" : "FLAT", text_color=inPosition ? color.yellow : color.gray, text_size=size.small)
+    timeLeft = inPosition ? maxHoldBars - barsInTrade : 0
+    table.cell(tbl, 2, 5, inPosition ? str.tostring(timeLeft) + " bars left" : "", text_color=timeLeft <= 5 ? color.red : color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 5, str.tostring(daysSince) + " bars ago", text_color=color.gray, text_size=size.tiny)
+
+    // Row 6: separator
+    table.cell(tbl, 0, 6, "", bgcolor=color.black)
+    table.cell(tbl, 1, 6, "", bgcolor=color.black)
+    table.cell(tbl, 2, 6, "", bgcolor=color.black)
+    table.cell(tbl, 3, 6, "", bgcolor=color.black)
+
+    // Row 7: Stop / Target
+    table.cell(tbl, 0, 7, "RISK", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 7, "Stop " + str.tostring(atrStopMult, "0.#") + "x", text_color=color.orange, text_size=size.small)
+    table.cell(tbl, 2, 7, "Tgt " + str.tostring(atrTargetMult, "0.#") + "x", text_color=color.green, text_size=size.small)
+    table.cell(tbl, 3, 7, "Hold " + str.tostring(maxHoldBars) + "b", text_color=color.white, text_size=size.tiny)
+
+    // Row 8: Iron condor info
+    table.cell(tbl, 0, 8, "IC", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 8, hasIronCondor ? (isRanging ? "ACTIVE" : "WAIT") : "N/A", text_color=isRanging and hasIronCondor ? color.blue : color.gray, text_size=size.small)
+    table.cell(tbl, 2, 8, hasIronCondor ? "Quiet " + str.tostring(adxQuietCount) + "b" : "", text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 3, 8, "", text_size=size.tiny)
+
+    // Row 9: Meta flag / version
+    metaWarn = isMeta ? "LOW CONVICTION" : ""
+    table.cell(tbl, 0, 9, metaWarn, bgcolor=isMeta ? color.new(color.red, 60) : color.black, text_color=color.white, text_size=size.tiny)
+    table.cell(tbl, 1, 9, "", bgcolor=color.black)
+    table.cell(tbl, 2, 9, "TF=" + timeframe.period, text_color=color.gray, text_size=size.tiny, bgcolor=color.black)
+    table.cell(tbl, 3, 9, "v1.0", text_color=color.gray, text_size=size.tiny, bgcolor=color.black)
+
+
+// ════════════════════════════════════════════════════════════════════════
+// ALERT CONDITIONS
+// ════════════════════════════════════════════════════════════════════════
+
+alertcondition(fireSignal and bestAction == "LONG", title="Long Entry", message="SWING_OPT LONG on {{ticker}}")
+alertcondition(fireSignal and bestAction == "SHORT", title="Short Entry", message="SWING_OPT SHORT on {{ticker}}")
+alertcondition(fireSignal and bestAction == "IRON_CONDOR", title="Iron Condor", message="SWING_OPT IC on {{ticker}}")
+alertcondition(exitSignal, title="Exit", message="SWING_OPT EXIT on {{ticker}}")
+
+
+// ════════════════════════════════════════════════════════════════════════
+// WEBHOOK JSON PAYLOADS
+// ════════════════════════════════════════════════════════════════════════
+
+if fireSignal and bestAction != "NONE"
+    safeTicker = str.replace_all(syminfo.ticker, '"', '\\"')
+    safeToken  = str.replace_all(webhookToken, '"', '\\"')
+    payload = '{' + '"token":"' + safeToken + '",' + '"ticker":"' + safeTicker + '",' + '"action":"' + bestAction + '",' + '"archetype":"' + archName + '",' + '"conviction":' + str.tostring(bestScore, "0.#") + ',' + '"direction_mode":"' + dirName + '",' + '"regime_state":"' + regimeState + '",' + '"entry_price":' + str.tostring(close, "0.##") + ',' + '"stop_loss":' + str.tostring(nz(stopLevel, 0), "0.##") + ',' + '"target":' + str.tostring(nz(targetLevel, 0), "0.##") + ',' + '"atr":' + str.tostring(atr, "0.##") + ',' + '"rsi":' + str.tostring(rsi14, "0.#") + ',' + '"adx":' + str.tostring(adxVal, "0.#") + ',' + '"suggested_dte":50,' + '"max_hold_days":' + str.tostring(maxHoldBars) + ',' + '"exit_reason":"",' + '"timestamp":"' + str.tostring(timenow) + '"}'
+    alert(payload, alert.freq_once_per_bar_close)
+
+if exitSignal
+    safeTicker2 = str.replace_all(syminfo.ticker, '"', '\\"')
+    safeToken2  = str.replace_all(webhookToken, '"', '\\"')
+    exitPayload = '{' + '"token":"' + safeToken2 + '",' + '"ticker":"' + safeTicker2 + '",' + '"action":"EXIT",' + '"exit_reason":"' + exitReason + '",' + '"bars_in_trade":' + str.tostring(barsInTrade) + ',' + '"regime_state":"' + regimeState + '",' + '"rsi":' + str.tostring(rsi14, "0.#") + ',' + '"timestamp":"' + str.tostring(timenow) + '"}'
+    alert(exitPayload, alert.freq_once_per_bar_close)
