@@ -235,10 +235,20 @@ momentumScore_r = math.min((adxVal > adxRangeThr and adxVal <= adxTrendThr ? 0.5
      (math.abs(roc20) > 3.0 ? 0.2 : 0.0), 1.0) * 100.0
 
 // Dominant regime (V4 priority: breakout > trending > momentum > meanrev > neutral)
-regimeTrend    = trendScore >= 60
+// FIX 2: Tighter regime — trending requires stacked EMAs + ADX > 30
+emaStacked     = ema9 > ema21 and ema21 > ema50
+regimeTrend    = trendScore >= 60 and adxVal > 30 and diPlus > diMinus and close > ema50 and emaStacked
 regimeBreakout = breakoutScore >= 60
 regimeMeanRev  = meanRevScore >= 60
 regimeMomentum = momentumScore_r >= 40 and not regimeBreakout and not regimeTrend and not regimeMeanRev
+
+// FIX 2: Ranging requires 10+ consecutive bars of ADX < threshold
+var int adxQuietCount = 0
+adxQuietCount := adxVal < adxRangeThr ? adxQuietCount + 1 : 0
+regimeRangingStrict = adxQuietCount >= 10
+
+// FIX 2: No-trade zone — conflicting signals (bearish EMAs but above EMA200)
+noTradeZone    = ema9 < ema21 and close > ema200
 
 regime        = regimeBreakout ? 2 : regimeTrend ? 4 : regimeMomentum ? 3 : regimeMeanRev ? 1 : 0
 regimeStr     = regime == 1 ? "MEAN_REV" : regime == 2 ? "BREAKOUT" : regime == 3 ? "MOMENTUM" : regime == 4 ? "TRENDING" : "NEUTRAL"
@@ -315,24 +325,27 @@ s2_scoreShort = (not s2_breakLo or s2_extDn or not s2_hasVol) ? 0.0 :
      (atrExpanding ? 5.0 : 0.0) +
      (regimeBreakout ? 15.0 : regime == 4 ? 8.0 : regime == 0 ? 5.0 : 0.0)
 
-// ── S3: EMA/VWAP Momentum ──
+// ── S3: EMA Pullback Momentum (FIX 3: pullback-to-EMA entry, not cross event) ──
 s3_longBlocked  = rsi14 > 70
 s3_shortBlocked = rsi14 < 30
-s3_barsSinceCU  = ta.barssince(s3_crossUp)
-s3_barsSinceCD  = ta.barssince(s3_crossDown)
-s3_recentUp     = not na(s3_barsSinceCU) and s3_barsSinceCU <= 5
-s3_recentDn     = not na(s3_barsSinceCD) and s3_barsSinceCD <= 5
 
-s3_scoreLong  = (s3_longBlocked or not s3_recentUp) ? 0.0 :
-     (s3_crossUp ? 25.0 : ema9 > ema21 ? 10.0 : 0.0) +
+// FIX 3: Pullback trigger — price touched EMA21 within last 5 bars, now bouncing above
+s3_touchedEma21Long = low[1] <= ema21[1] or low[2] <= ema21[2] or low[3] <= ema21[3] or low[4] <= ema21[4] or low[5] <= ema21[5]
+s3_bounceUp = s3_touchedEma21Long and close > ema21 and ema9 > ema21
+
+s3_touchedEma21Short = high[1] >= ema21[1] or high[2] >= ema21[2] or high[3] >= ema21[3] or high[4] >= ema21[4] or high[5] >= ema21[5]
+s3_bounceDn = s3_touchedEma21Short and close < ema21 and ema9 < ema21
+
+s3_scoreLong  = (s3_longBlocked or not s3_bounceUp) ? 0.0 :
+     (close > ema21 and close[1] <= ema21[1] ? 25.0 : 10.0) +
      (close > s3_anchor ? 15.0 : 0.0) +
      (close > ema50 ? 12.0 : 0.0) +
      (s3_hist > 0 and rsi14 > 50 ? 15.0 : s3_hist > 0 ? 8.0 : 0.0) +
      (volAboveAvg ? 10.0 : 0.0) +
      (roc20 > 3.0 ? 8.0 : 0.0) +
      (regimeMomentum ? 15.0 : regime == 4 ? 10.0 : regime == 2 ? 8.0 : regime == 0 ? 5.0 : 0.0)
-s3_scoreShort = (s3_shortBlocked or not s3_recentDn) ? 0.0 :
-     (s3_crossDown ? 25.0 : ema9 < ema21 ? 10.0 : 0.0) +
+s3_scoreShort = (s3_shortBlocked or not s3_bounceDn) ? 0.0 :
+     (close < ema21 and close[1] >= ema21[1] ? 25.0 : 10.0) +
      (close < s3_anchor ? 15.0 : 0.0) +
      (close < ema50 ? 12.0 : 0.0) +
      (s3_hist < 0 and rsi14 < 50 ? 15.0 : s3_hist < 0 ? 8.0 : 0.0) +
@@ -446,12 +459,19 @@ shortScoreOk  = v4_rawDir == "BUY" or v6_composite >= shortMinScore
 // ATR range filter
 atrInRange    = atrPct >= atrMinPct and atrPct <= atrMaxPct
 
-// Cooldown
+// FIX 1: Swing-aware cooldown — suppress signals within the same swing
 var int lastSignalBar = 0
-cooldownOk    = bar_index - lastSignalBar >= cooldownBars
+var float lastSignalClose = 0.0
+var bool swingCooldownActive = false
+barCooldownOk = bar_index - lastSignalBar >= cooldownBars
+pullbackReset = swingCooldownActive and lastSignalClose > 0 and close < lastSignalClose * 0.97
+cooldownOk    = barCooldownOk and (not swingCooldownActive or pullbackReset)
 
-// Fire or not — simple
-isPromoted    = v4_hasSignal and v6_composite >= minScore and dirOk and shortScoreOk and atrInRange and cooldownOk and barstate.isconfirmed
+// FIX 5: Weekly bullish is REQUIRED for long signals (not just a bonus)
+wkGateOk      = v4_rawDir == "SELL" or wkBullish
+
+// Fire or not — simple (FIX 2+5: add noTradeZone gate + weekly gate)
+isPromoted    = v4_hasSignal and v6_composite >= minScore and dirOk and shortScoreOk and atrInRange and cooldownOk and wkGateOk and not noTradeZone and barstate.isconfirmed
 bestAction    = v4_rawDir == "BUY" ? "LONG_ENTRY" : "SHORT_ENTRY"
 optionsGuide  = v4_rawStrat == 2 ? "breakout_long" :
      v4_rawStrat == 1 ? "sell_premium" : "directional_long"
@@ -463,11 +483,16 @@ optionsGuide  = v4_rawStrat == 2 ? "breakout_long" :
 
 var int entryBar    = 0
 var bool inPosition = false
+var float entryRSI  = 0.0
 
-closeBelowExit      = close < s4_dEMA
+// FIX 4: Fast EMA stop — use EMA(9) instead of EMA(21)
+closeBelowFastEma   = close < ema9
 var int belowCount  = 0
-belowCount         := closeBelowExit ? belowCount + 1 : 0
+belowCount         := closeBelowFastEma ? belowCount + 1 : 0
 exitStop            = inPosition and belowCount >= emaExitBars
+
+// FIX 4: Momentum reversal exit — RSI drops below 40 after entry above 60
+exitMomentum        = inPosition and entryRSI > 60 and rsi14 < 40
 
 exitTP              = inPosition and rsi14 > rsiExitHi
 barsInTrade         = inPosition ? bar_index - entryBar : 0
@@ -476,9 +501,8 @@ exitTime            = inPosition and barsInTrade >= maxHoldBars
 // Regime deterioration: trending/momentum → mean_rev or neutral with low confidence
 exitRegime          = inPosition and regime == 1 and regimeConf > 60
 
-exitSignal          = exitStop or exitTP or exitTime or exitRegime
-exitReason          = exitStop ? "stop_loss" : exitTP ? "take_profit" :
-     exitTime ? "time_stop" : exitRegime ? "regime_change" : ""
+exitSignal          = exitStop or exitMomentum or exitTP or exitTime or exitRegime
+exitReason          = exitStop ? "stop_loss" : exitMomentum ? "momentum_reversal" : exitTP ? "take_profit" : exitTime ? "time_stop" : exitRegime ? "regime_change" : ""
 
 
 // ════════════════════════════════════════════════════════════════════════
@@ -486,15 +510,19 @@ exitReason          = exitStop ? "stop_loss" : exitTP ? "take_profit" :
 // ════════════════════════════════════════════════════════════════════════
 
 if isPromoted
-    lastSignalBar := bar_index
-    entryBar      := bar_index
-    inPosition    := true
-    belowCount    := 0
+    lastSignalBar      := bar_index
+    lastSignalClose    := close
+    swingCooldownActive := true
+    entryBar           := bar_index
+    entryRSI           := rsi14
+    inPosition         := true
+    belowCount         := 0
 
 if exitSignal
-    inPosition    := false
-    entryBar      := 0
-    belowCount    := 0
+    inPosition          := false
+    swingCooldownActive := false
+    entryBar            := 0
+    belowCount          := 0
 
 
 // ════════════════════════════════════════════════════════════════════════
@@ -657,7 +685,7 @@ if barstate.islast and showDashboard
     table.cell(tbl, 1, 12, "", bgcolor=color.black)
     table.cell(tbl, 2, 12, "TF=" + timeframe.period,
          text_color=color.gray, text_size=size.tiny, bgcolor=color.black)
-    table.cell(tbl, 3, 12, "v7.0",
+    table.cell(tbl, 3, 12, "v7.1",
          text_color=color.gray, text_size=size.tiny, bgcolor=color.black)
 
 
